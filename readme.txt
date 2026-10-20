@@ -5,7 +5,7 @@ Plugin URI: https://olivierbigras.com
 Tags: google sheets, sftp, sync, automation, csv
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.5.3
+Stable tag: 1.5.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -84,6 +84,9 @@ Yes! Each Google Sheet can have its own Apps Script. They can all point to the s
 
 == Changelog ==
 
+= 1.5.4 =
+* Maintenance: GitHub links updated to github.com/olivierbigras (account renamed from bigrat95). No functional change.
+
 = 1.5.3 =
 * NEW: Settings and Donate links on the Plugins screen, optional support notice on the settings screen, footer donation link, and Donate link updated to PayPal on the WordPress.org plugin page
 
@@ -144,6 +147,9 @@ Yes! Each Google Sheet can have its own Apps Script. They can all point to the s
 * Google Apps Script generator
 
 == Upgrade Notice ==
+
+= 1.5.4 =
+Maintenance release: GitHub links updated. No functional change.
 
 = 1.5.3 =
 Adds Donate / support links (Plugins screen, settings notice, PayPal Donate link on WordPress.org).
