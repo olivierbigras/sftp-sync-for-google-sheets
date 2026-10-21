@@ -68,10 +68,12 @@ class OLISSGS_Plugin {
         add_action('rest_api_init', [$this, 'register_rest_routes']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_filter('plugin_action_links_' . OLISSGS_BASENAME, [$this, 'plugin_action_links']);
+        add_filter('plugin_row_meta', [$this, 'plugin_row_meta'], 10, 2);
+        add_action('wp_ajax_olissgs_mark_script_copied', [OLISSGS_Admin_Settings::get_instance(), 'ajax_mark_script_copied']);
     }
 
     /**
-     * Settings link on the Plugins screen. Donate is only on the settings page.
+     * Settings link on the Plugins screen.
      *
      * @param string[] $links Links.
      * @return string[]
@@ -79,6 +81,21 @@ class OLISSGS_Plugin {
     public function plugin_action_links($links) {
         $settings = '<a href="' . esc_url(admin_url('options-general.php?page=' . OLISSGS_SLUG)) . '">' . esc_html__('Settings', 'sftp-sync-for-google-sheets') . '</a>';
         array_unshift($links, $settings);
+        return $links;
+    }
+
+    /**
+     * Single Donate link (wordpress.org: one donate call, in plugin_row_meta).
+     *
+     * @param string[] $links Links.
+     * @param string   $file  Basename.
+     * @return string[]
+     */
+    public function plugin_row_meta($links, $file) {
+        if ($file !== OLISSGS_BASENAME) {
+            return $links;
+        }
+        $links[] = '<a href="' . esc_url(OLISSGS_DONATE_URL) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Donate', 'sftp-sync-for-google-sheets') . '</a>';
         return $links;
     }
 
@@ -147,7 +164,7 @@ class OLISSGS_Plugin {
         wp_enqueue_style(
             'olissgs-admin',
             OLISSGS_PLUGIN_URL . 'css/olissgs-admin.css',
-            [],
+            ['dashicons'],
             OLISSGS_VERSION
         );
 
@@ -163,7 +180,10 @@ class OLISSGS_Plugin {
             'olissgs-admin',
             'olissgsAdmin',
             [
-                'initialStep' => isset($_GET['olissgs_step']) ? min(3, max(1, absint(wp_unslash($_GET['olissgs_step'])))) : 1, // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only wizard step.
+                'ajaxUrl'      => admin_url('admin-ajax.php'),
+                'nonce'        => wp_create_nonce('olissgs_admin'),
+                'copied'       => __('Copied to clipboard', 'sftp-sync-for-google-sheets'),
+                'previewStamp' => current_time('Y-m-d_His'),
             ]
         );
     }
@@ -227,6 +247,32 @@ class OLISSGS_Plugin {
             return [];
         }
         return array_slice(array_reverse($lines), 0, $limit);
+    }
+
+    /**
+     * Parse log lines into date / status / message rows.
+     *
+     * @param int $limit Max rows.
+     * @return array<int,array<string,string>>
+     */
+    public static function get_parsed_logs($limit = 20) {
+        $parsed = [];
+        foreach (self::get_logs($limit) as $line) {
+            if (preg_match('/^\[([^\]]+)\] \[([^\]]+)\] (.*)$/', $line, $matches)) {
+                $parsed[] = [
+                    'datetime' => $matches[1],
+                    'type'     => $matches[2],
+                    'message'  => $matches[3],
+                ];
+            } elseif ($line !== '') {
+                $parsed[] = [
+                    'datetime' => '',
+                    'type'     => 'info',
+                    'message'  => $line,
+                ];
+            }
+        }
+        return $parsed;
     }
 }
 

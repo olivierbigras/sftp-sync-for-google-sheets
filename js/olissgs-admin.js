@@ -12,62 +12,57 @@
 		}
 	}
 
-	function copyText(text) {
+	function announceCopied() {
+		var live = document.getElementById('olissgs-copy-status');
+		var text = config.copied || 'Copied to clipboard';
+		if (live) {
+			live.textContent = text;
+		}
+		document.querySelectorAll('.olissgs-copy-feedback').forEach(function (el) {
+			el.hidden = false;
+			el.textContent = text;
+		});
+	}
+
+	function copyText(text, markCopied) {
 		if (!text) {
 			return;
 		}
+		var done = function () {
+			announceCopied();
+			if (markCopied && config.ajaxUrl) {
+				var body = new FormData();
+				body.append('action', 'olissgs_mark_script_copied');
+				body.append('nonce', config.nonce || '');
+				if (window.fetch) {
+					fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' });
+				}
+			}
+		};
 		if (navigator.clipboard && navigator.clipboard.writeText) {
-			navigator.clipboard.writeText(text);
+			navigator.clipboard.writeText(text).then(done).catch(done);
+			return;
 		}
+		done();
 	}
 
-	function showStep(step) {
-		step = parseInt(step, 10);
-		if (step < 1 || step > 3) {
-			step = 1;
+	function updateFilenamePreview() {
+		var preview = document.getElementById('olissgs-filename-preview');
+		var baseInput = document.getElementById('olissgs_base_filename');
+		var modeInput = document.getElementById('olissgs_filename_mode');
+		var formatInput = document.getElementById('olissgs_export_format');
+		if (!preview || !baseInput || !modeInput || !formatInput) {
+			return;
 		}
-
-		document.querySelectorAll('[data-olissgs-panel]').forEach(function (panel) {
-			var active = parseInt(panel.getAttribute('data-olissgs-panel'), 10) === step;
-			panel.hidden = !active;
-		});
-
-		document.querySelectorAll('[data-olissgs-step]').forEach(function (tab) {
-			var active = parseInt(tab.getAttribute('data-olissgs-step'), 10) === step;
-			tab.classList.toggle('nav-tab-active', active);
-			tab.setAttribute('aria-current', active ? 'step' : 'false');
-		});
-
-		var stepField = document.getElementById('olissgs_step_field');
-		if (stepField) {
-			stepField.value = String(step);
+		var base = baseInput.value || 'sheet_export';
+		var name = base;
+		if (modeInput.value === 'dated') {
+			name += '_' + (config.previewStamp || '2026-10-21_020000');
 		}
-
-		if (window.history && window.history.replaceState) {
-			try {
-				var url = new URL(window.location.href);
-				url.searchParams.set('olissgs_step', String(step));
-				window.history.replaceState({}, '', url.toString());
-			} catch (e) {
-				// Ignore URL update failures.
-			}
-		}
+		preview.textContent = name + '.' + formatInput.value;
 	}
 
 	onReady(function () {
-		showStep(config.initialStep || 1);
-
-		document.querySelectorAll('[data-olissgs-step], [data-olissgs-goto]').forEach(function (el) {
-			el.addEventListener('click', function (e) {
-				var step = el.getAttribute('data-olissgs-goto') || el.getAttribute('data-olissgs-step');
-				if (!step) {
-					return;
-				}
-				e.preventDefault();
-				showStep(step);
-			});
-		});
-
 		var scheduleSelect = document.getElementById('olissgs_schedule');
 		var dailyHourRow = document.getElementById('olissgs-daily-hour-row');
 		if (scheduleSelect && dailyHourRow) {
@@ -78,9 +73,25 @@
 			syncHourRow();
 		}
 
+		['olissgs_base_filename', 'olissgs_filename_mode', 'olissgs_export_format'].forEach(function (id) {
+			var el = document.getElementById(id);
+			if (el) {
+				el.addEventListener('input', updateFilenamePreview);
+				el.addEventListener('change', updateFilenamePreview);
+			}
+		});
+		updateFilenamePreview();
+
 		document.querySelectorAll('[data-olissgs-copy]').forEach(function (btn) {
 			btn.addEventListener('click', function () {
-				copyText(btn.getAttribute('data-olissgs-copy') || '');
+				copyText(btn.getAttribute('data-olissgs-copy') || '', false);
+			});
+		});
+
+		document.querySelectorAll('[data-olissgs-copy-target]').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var target = document.getElementById(btn.getAttribute('data-olissgs-copy-target') || '');
+				copyText(target ? target.value : '', btn.getAttribute('data-olissgs-mark-copied') === '1');
 			});
 		});
 
@@ -90,19 +101,6 @@
 				if (message && !window.confirm(message)) {
 					e.preventDefault();
 				}
-			});
-		});
-
-		document.querySelectorAll('[data-olissgs-show]').forEach(function (btn) {
-			btn.addEventListener('click', function (e) {
-				e.preventDefault();
-				var targetId = btn.getAttribute('data-olissgs-show');
-				var target = targetId ? document.getElementById(targetId) : null;
-				if (target) {
-					target.hidden = false;
-					target.classList.add('is-visible');
-				}
-				btn.hidden = true;
 			});
 		});
 	});

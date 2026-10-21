@@ -158,9 +158,17 @@ foreach (array_keys($map) as $name) {
     $field = 'OLISSGS_Options::key(\'' . $name . '\')';
     olissgs_assert(strpos($admin, $field) !== false, "settings page still registers field {$name}");
 }
-olissgs_assert(strpos($admin, 'Save and Test') !== false, 'Save and Test button is present');
-olissgs_assert(substr_count($admin, 'data-olissgs-panel') >= 3, 'settings page has 3 step panels');
-olissgs_assert(substr_count($admin, 'OLISSGS_DONATE_URL') === 1, 'settings page has a single donate call');
+olissgs_assert(strpos($admin, 'Save and test connection') !== false, 'Save and test connection button is present');
+olissgs_assert(strpos($admin, '1. SFTP server') !== false, 'step 1 heading is present');
+olissgs_assert(strpos($admin, '2. Google Sheets') !== false, 'step 2 heading is present');
+olissgs_assert(strpos($admin, '3. Activity') !== false, 'step 3 heading is present');
+olissgs_assert(strpos($admin, 'OLISSGS_DONATE_URL') === false, 'settings page has no donate call');
+olissgs_assert(strpos($admin, 'donate_notice') === false, 'settings page has no donate notice');
+
+$main = file_get_contents(dirname(__DIR__) . '/sftp-sync-for-google-sheets.php');
+olissgs_assert(strpos($main, "plugin_row_meta") !== false, 'Donate lives in plugin_row_meta');
+olissgs_assert(substr_count($main, 'esc_html__(\'Donate\'') === 1, 'exactly one Donate label in the main plugin file');
+olissgs_assert(strpos($main, 'donate_notice') === false, 'main plugin file has no donate notice');
 
 echo "\nAll option-map checks passed.\n";
 exit(0);

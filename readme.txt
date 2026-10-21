@@ -86,7 +86,7 @@ This plugin talks to the following external systems. None of these calls are hid
 
 **User-configured SFTP server**
 
-The plugin connects to the SFTP host, port, username, and remote path you save in Settings → SFTP Sync. A connection is opened when (1) a file is received on the REST upload endpoint, or (2) an administrator clicks “Test SFTP Connection”. The plugin sends the stored SFTP credentials and the uploaded file contents to that host. No data is sent to the plugin author. Terms and privacy depend on the SFTP provider you choose.
+The plugin connects to the SFTP host, port, username, and remote path you save in Settings → SFTP Sync. A connection is opened when (1) a file is received on the REST upload endpoint, or (2) an administrator clicks “Save and test connection”. The plugin sends the stored SFTP credentials and the uploaded file contents to that host. No data is sent to the plugin author. Terms and privacy depend on the SFTP provider you choose.
 
 **Google Sheets / Google Apps Script (optional, user-installed)**
 
@@ -103,16 +103,16 @@ Google receives your spreadsheet ID and account token for the export. Your WordP
 
 **PayPal (optional donate links)**
 
-Donate links on the Plugins screen, the settings page, and the plugin meta row open PayPal only when a user chooses to click them. The plugin does not send visitor or site data to PayPal automatically.
+A single Donate link in the plugin meta row on the Plugins screen opens PayPal only when a user chooses to click it. The plugin does not send visitor or site data to PayPal automatically.
 
 * User Agreement: https://www.paypal.com/legalhub/useragreement-full
 * Privacy Statement: https://www.paypal.com/legalhub/privacy-full
 
 == Screenshots ==
 
-1. Plugin settings page with API endpoint information and SFTP server configuration
-2. Export settings with schedule, filename mode, and format options
-3. Activity logs and Google Apps Script code generator
+1. Settings step 1: SFTP server fields, Save and test connection, Advanced filename options
+2. Settings step 2: Google Sheets schedule and the generated Apps Script
+3. Settings step 3: activity log table
 
 == Changelog ==
 
@@ -121,7 +121,7 @@ Donate links on the Plugins screen, the settings page, and the plugin meta row o
 * Lossless upgrade: copies the 10 settings (and API / encryption keys) from `gsheet_sftp_*` to `olissgs_*`, then deletes the old options
 * Existing REST namespace `gsheet-sftp/v1` kept so deployed Google Apps Scripts keep working; `olissgs/v1` registered as an alias
 * Admin CSS/JS moved to enqueued files (no inline script, style, or onclick handlers)
-* Settings screen is now 3 steps, with a Save and Test button and a single donate link
+* Settings screen is now 3 numbered steps (SFTP, Google Sheets, Activity), with “Save and test connection” and a single Donate link in plugin_row_meta
 * Documented external services (SFTP, Google Apps Script, PayPal) in the readme
 * Slug and text domain unchanged: `sftp-sync-for-google-sheets`
 

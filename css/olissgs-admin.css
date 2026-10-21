@@ -1,24 +1,44 @@
 .olissgs-wrap {
-	max-width: 800px;
+	max-width: 860px;
 }
 
 .olissgs-wrap .form-table th {
 	width: 200px;
 }
 
-.olissgs-api-key {
-	font-family: monospace;
-	background: #f0f0f1;
-	padding: 8px 12px;
+.olissgs-status-badge {
+	display: inline-block;
+	margin: 8px 0 16px;
+	padding: 6px 10px;
 	border-radius: 4px;
+	border: 1px solid #c3c4c7;
+	background: #f0f0f1;
 }
 
+.olissgs-status-ok {
+	border-color: #00a32a;
+	background: #edfaef;
+}
+
+.olissgs-status-error {
+	border-color: #d63638;
+	background: #fcf0f1;
+}
+
+.olissgs-api-key,
 .olissgs-endpoint {
 	font-family: monospace;
-	background: #e7f3e7;
 	padding: 8px 12px;
 	border-radius: 4px;
 	word-break: break-all;
+}
+
+.olissgs-api-key {
+	background: #f0f0f1;
+}
+
+.olissgs-endpoint {
+	background: #e7f3e7;
 }
 
 .olissgs-section {
@@ -28,69 +48,66 @@
 	margin: 20px 0;
 }
 
-.olissgs-logs {
-	max-height: 300px;
-	overflow-y: auto;
-	background: #1e1e1e;
-	color: #d4d4d4;
-	padding: 15px;
-	font-family: monospace;
-	font-size: 12px;
+.olissgs-step-actions {
+	margin-top: 12px;
 }
 
-.olissgs-logs .log-success {
-	color: #4ec9b0;
+.olissgs-test-result {
+	margin-top: 12px;
+	padding: 8px 12px;
+	border-left: 4px solid #c3c4c7;
 }
 
-.olissgs-logs .log-error {
-	color: #f14c4c;
+.olissgs-test-result.is-ok {
+	border-left-color: #00a32a;
+	background: #edfaef;
 }
 
-.olissgs-logs .log-info {
-	color: #569cd6;
+.olissgs-test-result.is-error {
+	border-left-color: #d63638;
+	background: #fcf0f1;
 }
 
-.olissgs-inline-form {
-	display: inline;
-	margin-left: 10px;
+.olissgs-advanced {
+	margin-top: 16px;
 }
 
-.olissgs-error-text {
-	color: #d63638;
-}
-
-.olissgs-clear-logs {
-	margin-bottom: 10px;
+.olissgs-advanced summary {
+	cursor: pointer;
+	font-weight: 600;
 }
 
 .olissgs-apps-script {
-	display: none;
+	display: block;
 	width: 100%;
-	height: 400px;
+	height: 280px;
 	font-family: monospace;
 	font-size: 12px;
+	margin-top: 8px;
 }
 
-.olissgs-apps-script.is-visible {
-	display: block;
+.olissgs-guide {
+	margin: 16px 0;
 }
 
-.olissgs-footer-note {
-	margin-top: 20px;
+.olissgs-copy-feedback {
+	margin-left: 8px;
 }
 
-.olissgs-steps {
-	margin: 16px 0 0;
+.olissgs-clear-logs {
+	margin: 8px 0 12px;
 }
 
-.olissgs-step-actions {
-	margin-top: 16px;
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-	align-items: center;
-}
-
-.olissgs-panel[hidden] {
+.olissgs-regen {
 	display: none;
+}
+
+.olissgs-wrap .notice.inline {
+	margin: 8px 0 0;
+	padding: 8px 12px;
+}
+
+.olissgs-wrap .widefat .dashicons {
+	margin-right: 4px;
+	vertical-align: text-bottom;
 }

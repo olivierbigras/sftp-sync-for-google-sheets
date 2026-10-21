@@ -6,7 +6,7 @@
 - Lossless upgrade: copies the 10 settings (and API / encryption keys) from `gsheet_sftp_*` to `olissgs_*`, then deletes the old options
 - Existing REST namespace `gsheet-sftp/v1` kept so deployed Google Apps Scripts keep working; `olissgs/v1` registered as an alias
 - Admin CSS/JS moved to enqueued files (no inline script, style, or onclick handlers)
-- Settings screen is now 3 steps, with a Save and Test button and a single donate link
+- Settings screen is now 3 numbered steps (SFTP, Google Sheets, Activity), with “Save and test connection” and a single Donate link in plugin_row_meta
 - Documented external services (SFTP, Google Apps Script, PayPal) in the readme
 - Slug and text domain unchanged: `sftp-sync-for-google-sheets`
 

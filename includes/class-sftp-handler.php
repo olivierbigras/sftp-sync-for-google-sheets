@@ -271,10 +271,7 @@ class OLISSGS_SFTP_Handler {
                 ];
             }
 
-            return [
-                'success' => true,
-                'message' => 'Connection successful! (using ssh2 extension)',
-            ];
+            return $this->write_probe_ssh2($sftp, $config);
         }
 
         $autoload_path = OLISSGS_PLUGIN_DIR . 'vendor/autoload.php';
@@ -293,10 +290,7 @@ class OLISSGS_SFTP_Handler {
                     ];
                 }
 
-                return [
-                    'success' => true,
-                    'message' => 'Connection successful! (using phpseclib3)',
-                ];
+                return $this->write_probe_phpseclib($sftp, $config, 'phpseclib3');
             } catch (Exception $e) {
                 return [
                     'success' => false,
@@ -316,10 +310,7 @@ class OLISSGS_SFTP_Handler {
                     ];
                 }
 
-                return [
-                    'success' => true,
-                    'message' => 'Connection successful! (using phpseclib)',
-                ];
+                return $this->write_probe_phpseclib($sftp, $config, 'phpseclib');
             } catch (Exception $e) {
                 return [
                     'success' => false,
@@ -331,6 +322,57 @@ class OLISSGS_SFTP_Handler {
         return [
             'success' => false,
             'message' => 'No SFTP library available. Install ssh2 PHP extension or run: composer require phpseclib/phpseclib:~3.0',
+        ];
+    }
+
+    /**
+     * Confirm the remote folder is writable (ssh2 stream).
+     *
+     * @param resource            $sftp   SFTP resource.
+     * @param array<string,mixed> $config Config.
+     * @return array<string,mixed>
+     */
+    private function write_probe_ssh2($sftp, $config) {
+        $remote_path = trailingslashit($config['remote_path']);
+        $probe       = $remote_path . '.olissgs-write-test';
+        $remote_file = 'ssh2.sftp://' . $sftp . $probe;
+        if (@file_put_contents($remote_file, 'ok') === false) {
+            return [
+                'success' => false,
+                'message' => 'Connected, but could not write to the remote folder. Check the path and permissions.',
+            ];
+        }
+        @unlink($remote_file);
+        return [
+            'success' => true,
+            'message' => 'Connection successful, remote folder is writable.',
+        ];
+    }
+
+    /**
+     * Confirm the remote folder is writable (phpseclib).
+     *
+     * @param object              $sftp   Client.
+     * @param array<string,mixed> $config Config.
+     * @param string              $label  Library name.
+     * @return array<string,mixed>
+     */
+    private function write_probe_phpseclib($sftp, $config, $label) {
+        unset($label);
+        $remote_path = trailingslashit($config['remote_path']);
+        $probe       = $remote_path . '.olissgs-write-test';
+        if (!$sftp->put($probe, 'ok')) {
+            return [
+                'success' => false,
+                'message' => 'Connected, but could not write to the remote folder. Check the path and permissions.',
+            ];
+        }
+        if (method_exists($sftp, 'delete')) {
+            $sftp->delete($probe);
+        }
+        return [
+            'success' => true,
+            'message' => 'Connection successful, remote folder is writable.',
         ];
     }
 

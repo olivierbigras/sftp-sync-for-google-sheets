@@ -162,6 +162,8 @@ class OLISSGS_Options {
             self::key('api_key'),
             self::key('enc_key'),
             self::key('options_migrated'),
+            self::key('last_test'),
+            self::key('script_copied_fp'),
         ];
 
         foreach (self::all_legacy_map() as $name => $legacy) {

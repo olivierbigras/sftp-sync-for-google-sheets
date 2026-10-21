@@ -34,7 +34,7 @@ class OLISSGS_Admin_Settings {
      */
     public function register_settings() {
         register_setting('olissgs_settings', OLISSGS_Options::key('host'), [
-            'sanitize_callback' => 'sanitize_text_field',
+            'sanitize_callback' => [$this, 'sanitize_host'],
         ]);
         register_setting('olissgs_settings', OLISSGS_Options::key('port'), [
             'sanitize_callback' => [$this, 'sanitize_port'],
@@ -47,7 +47,7 @@ class OLISSGS_Admin_Settings {
             'sanitize_callback' => [$this, 'encrypt_password'],
         ]);
         register_setting('olissgs_settings', OLISSGS_Options::key('remote_path'), [
-            'sanitize_callback' => 'sanitize_text_field',
+            'sanitize_callback' => [$this, 'sanitize_remote_path'],
             'default'           => '/',
         ]);
         register_setting('olissgs_settings', OLISSGS_Options::key('schedule'), [
@@ -72,30 +72,6 @@ class OLISSGS_Admin_Settings {
         ]);
 
         $this->maybe_queue_connection_test();
-        add_filter('wp_redirect', [$this, 'preserve_step_on_settings_save']);
-    }
-
-    /**
-     * Keep the current wizard step after options.php redirects.
-     *
-     * @param string $location Redirect URL.
-     * @return string
-     */
-    public function preserve_step_on_settings_save($location) {
-        if (!is_admin() || !current_user_can('manage_options')) {
-            return $location;
-        }
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'olissgs_settings-options')) {
-            return $location;
-        }
-        if (empty($_POST['option_page']) || sanitize_text_field(wp_unslash($_POST['option_page'])) !== 'olissgs_settings') {
-            return $location;
-        }
-        $step = isset($_POST['olissgs_step']) ? absint(wp_unslash($_POST['olissgs_step'])) : 1;
-        if ($step < 1 || $step > 3) {
-            $step = 1;
-        }
-        return add_query_arg('olissgs_step', $step, $location);
     }
 
     /**
@@ -112,9 +88,31 @@ class OLISSGS_Admin_Settings {
     }
 
     /**
-     * @param mixed $port Port.
-     * @return int
+     * Domain or IP only — strip a pasted sftp:// prefix.
+     *
+     * @param mixed $host Host.
+     * @return string
      */
+    public function sanitize_host($host) {
+        $host = sanitize_text_field((string) $host);
+        $host = preg_replace('#^sftp://#i', '', $host);
+        return untrailingslashit($host);
+    }
+
+    /**
+     * Always store a trailing slash.
+     *
+     * @param mixed $path Remote path.
+     * @return string
+     */
+    public function sanitize_remote_path($path) {
+        $path = sanitize_text_field((string) $path);
+        if ($path === '') {
+            return '/';
+        }
+        return trailingslashit($path);
+    }
+
     public function sanitize_port($port) {
         $port = absint($port);
         if ($port < 1 || $port > 65535) {
@@ -293,6 +291,96 @@ class OLISSGS_Admin_Settings {
     }
 
     /**
+     * Fingerprint of values embedded in the generated Apps Script.
+     *
+     * @return string
+     */
+    public static function script_fingerprint() {
+        return md5(
+            wp_json_encode(
+                [
+                    OLISSGS_Options::get('schedule', 'daily'),
+                    (int) OLISSGS_Options::get('daily_hour', 2),
+                    OLISSGS_Options::get('filename_mode', 'dated'),
+                    OLISSGS_Options::get('base_filename', 'sheet_export'),
+                    OLISSGS_Options::get('export_format', 'csv'),
+                    OLISSGS_Options::get('api_key', ''),
+                ]
+            )
+        );
+    }
+
+    /**
+     * Persist that the current generated script was copied.
+     */
+    public function ajax_mark_script_copied() {
+        check_ajax_referer('olissgs_admin', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(null, 403);
+        }
+        OLISSGS_Options::update('script_copied_fp', self::script_fingerprint());
+        wp_send_json_success();
+    }
+
+    /**
+     * Status badge for the top of the settings screen.
+     *
+     * @return array{class:string,text:string}
+     */
+    public function get_status_badge() {
+        $host     = (string) OLISSGS_Options::get('host', '');
+        $username = (string) OLISSGS_Options::get('username', '');
+        $password = self::get_password();
+        $last     = OLISSGS_Options::get('last_test', []);
+
+        if ($host === '' || $username === '' || $password === '') {
+            return [
+                'class' => 'olissgs-status-idle',
+                'text'  => __('Not configured', 'sftp-sync-for-google-sheets'),
+            ];
+        }
+
+        if (is_array($last) && !empty($last) && empty($last['success'])) {
+            return [
+                'class' => 'olissgs-status-error',
+                /* translators: %s: last test error */
+                'text'  => sprintf(__('Error: %s', 'sftp-sync-for-google-sheets'), (string) ($last['message'] ?? '')),
+            ];
+        }
+
+        $last_send = '';
+        foreach (OLISSGS_Plugin::get_parsed_logs(50) as $row) {
+            if ($row['type'] === 'success' && $row['datetime'] !== '') {
+                $ts = strtotime($row['datetime']);
+                if ($ts) {
+                    $last_send = human_time_diff($ts, current_time('timestamp'));
+                }
+                break;
+            }
+        }
+
+        if ($last_send !== '') {
+            return [
+                'class' => 'olissgs-status-ok',
+                /* translators: %s: human time difference */
+                'text'  => sprintf(__('Connection OK, last send %s ago', 'sftp-sync-for-google-sheets'), $last_send),
+            ];
+        }
+
+        if (is_array($last) && !empty($last['success'])) {
+            return [
+                'class' => 'olissgs-status-ok',
+                'text'  => __('Connection OK', 'sftp-sync-for-google-sheets'),
+            ];
+        }
+
+        return [
+            'class' => 'olissgs-status-idle',
+            'text'  => __('Configured — save and test the connection', 'sftp-sync-for-google-sheets'),
+        ];
+    }
+
+    /**
      * Render Settings → SFTP Sync.
      */
     public function render_settings_page() {
@@ -300,14 +388,16 @@ class OLISSGS_Admin_Settings {
             return;
         }
 
+        $just_tested = false;
         if (get_transient('olissgs_test_after_save_' . get_current_user_id())) {
             delete_transient('olissgs_test_after_save_' . get_current_user_id());
             $this->test_connection();
+            $just_tested = true;
         }
 
         if (isset($_POST['olissgs_regenerate_api_key']) && check_admin_referer('olissgs_regenerate_key')) {
             OLISSGS_Options::update('api_key', wp_generate_password(32, false));
-            echo '<div class="notice notice-success"><p>' . esc_html__('API key regenerated successfully!', 'sftp-sync-for-google-sheets') . '</p></div>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__('API key regenerated. The current script will stop working until you copy it again.', 'sftp-sync-for-google-sheets') . '</p></div>';
         }
 
         if (isset($_POST['olissgs_clear_logs']) && check_admin_referer('olissgs_clear_logs')) {
@@ -322,46 +412,50 @@ class OLISSGS_Admin_Settings {
         if ($api_key === '') {
             $api_key = wp_generate_password(32, false);
             OLISSGS_Options::update('api_key', $api_key);
-            echo '<div class="notice notice-warning"><p>' . esc_html__('A new API key was generated because none was stored. Update CONFIG.API_KEY in your Google Apps Script to match the key on this page.', 'sftp-sync-for-google-sheets') . '</p></div>';
         }
 
         $endpoint_url           = rest_url('gsheet-sftp/v1/upload');
         $password_needs_reentry = self::password_needs_reentry();
         $has_stored_password    = (bool) OLISSGS_Options::get('password', '');
+        $schedule               = OLISSGS_Options::get('schedule', 'daily');
+        $last_test              = OLISSGS_Options::get('last_test', []);
+        $tested_ok              = is_array($last_test) && !empty($last_test['success']);
+        $already_configured     = OLISSGS_Options::get('host', '') && OLISSGS_Options::get('username', '') && self::get_password() !== '';
+        $show_google            = $tested_ok || $already_configured;
+        $copied_fp              = (string) OLISSGS_Options::get('script_copied_fp', '');
+        $script_stale           = ($copied_fp !== '' && $copied_fp !== self::script_fingerprint());
+        $status                 = $this->get_status_badge();
+        $logs                   = OLISSGS_Plugin::get_parsed_logs(20);
         ?>
         <div class="wrap olissgs-wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <?php if ($password_needs_reentry) : ?>
-                <div class="notice notice-error">
-                    <p><?php esc_html_e('The saved SFTP password could not be decrypted. This usually happens after WordPress security keys/salts are rotated (for example by Solid Security). Re-enter the SFTP password below and click Save and Test.', 'sftp-sync-for-google-sheets'); ?></p>
+            <p class="olissgs-status-badge <?php echo esc_attr($status['class']); ?>" role="status"><?php echo esc_html($status['text']); ?></p>
+            <p id="olissgs-copy-status" class="screen-reader-text" role="status" aria-live="polite"></p>
+
+            <?php if ($script_stale) : ?>
+                <div class="notice notice-warning">
+                    <p><?php esc_html_e('Your settings have changed: copy the script again into Google Sheets.', 'sftp-sync-for-google-sheets'); ?></p>
                 </div>
             <?php endif; ?>
 
-            <nav class="nav-tab-wrapper olissgs-steps" aria-label="<?php esc_attr_e('Setup steps', 'sftp-sync-for-google-sheets'); ?>">
-                <a href="#olissgs-step-1" class="nav-tab nav-tab-active" data-olissgs-step="1"><?php esc_html_e('1. SFTP server', 'sftp-sync-for-google-sheets'); ?></a>
-                <a href="#olissgs-step-2" class="nav-tab" data-olissgs-step="2"><?php esc_html_e('2. Export', 'sftp-sync-for-google-sheets'); ?></a>
-                <a href="#olissgs-step-3" class="nav-tab" data-olissgs-step="3"><?php esc_html_e('3. Google Apps Script', 'sftp-sync-for-google-sheets'); ?></a>
-            </nav>
-
             <form method="post" action="options.php">
                 <?php settings_fields('olissgs_settings'); ?>
-                <input type="hidden" name="olissgs_step" id="olissgs_step_field" value="1">
 
-                <div class="olissgs-section olissgs-panel" data-olissgs-panel="1" id="olissgs-step-1">
-                    <h2><?php esc_html_e('SFTP Server Settings', 'sftp-sync-for-google-sheets'); ?></h2>
-                    <p><?php esc_html_e('Step 1 of 3 — enter the server that should receive exported files.', 'sftp-sync-for-google-sheets'); ?></p>
+                <div class="olissgs-section" id="olissgs-step-1">
+                    <h2><?php esc_html_e('1. SFTP server', 'sftp-sync-for-google-sheets'); ?></h2>
 
                     <table class="form-table">
                         <tr>
-                            <th><label for="olissgs_host"><?php esc_html_e('SFTP Host', 'sftp-sync-for-google-sheets'); ?></label></th>
+                            <th><label for="olissgs_host"><?php esc_html_e('Host', 'sftp-sync-for-google-sheets'); ?></label></th>
                             <td>
                                 <input type="text" id="olissgs_host" name="<?php echo esc_attr(OLISSGS_Options::key('host')); ?>"
                                        value="<?php echo esc_attr(OLISSGS_Options::get('host', '')); ?>"
-                                       class="regular-text" placeholder="sftp.example.com or IP address">
+                                       class="regular-text" placeholder="<?php echo esc_attr__('sftp.example.com or IP address', 'sftp-sync-for-google-sheets'); ?>">
+                                <p class="description"><?php esc_html_e('Domain name or IP address, without sftp://. A pasted sftp:// prefix is removed when you save.', 'sftp-sync-for-google-sheets'); ?></p>
                             </td>
                         </tr>
                         <tr>
-                            <th><label for="olissgs_port"><?php esc_html_e('SFTP Port', 'sftp-sync-for-google-sheets'); ?></label></th>
+                            <th><label for="olissgs_port"><?php esc_html_e('Port', 'sftp-sync-for-google-sheets'); ?></label></th>
                             <td>
                                 <input type="number" id="olissgs_port" name="<?php echo esc_attr(OLISSGS_Options::key('port')); ?>"
                                        value="<?php echo esc_attr(OLISSGS_Options::get('port', 22)); ?>"
@@ -381,201 +475,239 @@ class OLISSGS_Admin_Settings {
                             <td>
                                 <input type="password" id="olissgs_password" name="<?php echo esc_attr(OLISSGS_Options::key('password')); ?>"
                                        value="" class="regular-text" autocomplete="new-password"
-                                       placeholder="<?php echo $password_needs_reentry ? esc_attr__('Re-enter password', 'sftp-sync-for-google-sheets') : ($has_stored_password ? '••••••••' : ''); ?>">
+                                       <?php echo $password_needs_reentry ? ' aria-invalid="true" aria-describedby="olissgs-password-error"' : ' aria-describedby="olissgs-password-help"'; ?>
+                                       placeholder="<?php echo $password_needs_reentry ? esc_attr__('Re-enter password', 'sftp-sync-for-google-sheets') : ($has_stored_password ? esc_attr__('•••••••• (saved)', 'sftp-sync-for-google-sheets') : ''); ?>">
                                 <?php if ($password_needs_reentry) : ?>
-                                    <p class="description olissgs-error-text"><?php esc_html_e('The stored password is unreadable. You must type it again and save.', 'sftp-sync-for-google-sheets'); ?></p>
+                                    <p id="olissgs-password-error" class="notice notice-error inline"><?php esc_html_e('The stored password is unreadable. You must type it again and save.', 'sftp-sync-for-google-sheets'); ?></p>
                                 <?php else : ?>
-                                    <p class="description"><?php esc_html_e('Leave blank to keep existing password.', 'sftp-sync-for-google-sheets'); ?></p>
+                                    <p id="olissgs-password-help" class="description"><?php esc_html_e('Leave blank to keep the current password. Password authentication only — SSH private keys are not supported yet.', 'sftp-sync-for-google-sheets'); ?></p>
                                 <?php endif; ?>
                             </td>
                         </tr>
                         <tr>
-                            <th><label for="olissgs_remote_path"><?php esc_html_e('Remote Path', 'sftp-sync-for-google-sheets'); ?></label></th>
+                            <th><label for="olissgs_remote_path"><?php esc_html_e('Remote folder', 'sftp-sync-for-google-sheets'); ?></label></th>
                             <td>
                                 <input type="text" id="olissgs_remote_path" name="<?php echo esc_attr(OLISSGS_Options::key('remote_path')); ?>"
                                        value="<?php echo esc_attr(OLISSGS_Options::get('remote_path', '/')); ?>"
-                                       class="regular-text" placeholder="/path/to/uploads/">
-                                <p class="description"><?php esc_html_e('Directory where files will be uploaded. Must end with /', 'sftp-sync-for-google-sheets'); ?></p>
+                                       class="regular-text" placeholder="<?php echo esc_attr__('/path/to/uploads/', 'sftp-sync-for-google-sheets'); ?>">
+                                <p class="description"><?php esc_html_e('A trailing / is added if needed.', 'sftp-sync-for-google-sheets'); ?></p>
                             </td>
                         </tr>
                     </table>
+
                     <p class="olissgs-step-actions">
-                        <?php submit_button(esc_html__('Save and Test', 'sftp-sync-for-google-sheets'), 'primary', 'olissgs_save_and_test', false); ?>
-                        <button type="button" class="button button-secondary" data-olissgs-goto="2"><?php esc_html_e('Next: Export', 'sftp-sync-for-google-sheets'); ?></button>
+                        <?php submit_button(__('Save and test connection', 'sftp-sync-for-google-sheets'), 'primary', 'olissgs_save_and_test', false); ?>
                     </p>
+                    <?php
+                    $test_message = '';
+                    $test_ok      = false;
+                    if ($just_tested && is_array($last_test) && isset($last_test['message'])) {
+                        $test_message = (string) $last_test['message'];
+                        $test_ok      = !empty($last_test['success']);
+                    } elseif (is_array($last_test) && isset($last_test['message'])) {
+                        $test_message = (string) $last_test['message'];
+                        $test_ok      = !empty($last_test['success']);
+                    }
+                    if ($test_message !== '') :
+                        ?>
+                        <p class="olissgs-test-result <?php echo $test_ok ? 'is-ok' : 'is-error'; ?>" role="status"><?php echo esc_html($test_message); ?></p>
+                    <?php endif; ?>
+
+                    <details class="olissgs-advanced">
+                        <summary><?php esc_html_e('Advanced', 'sftp-sync-for-google-sheets'); ?></summary>
+                        <table class="form-table">
+                            <tr>
+                                <th><label for="olissgs_export_format"><?php esc_html_e('File format', 'sftp-sync-for-google-sheets'); ?></label></th>
+                                <td>
+                                    <select id="olissgs_export_format" name="<?php echo esc_attr(OLISSGS_Options::key('export_format')); ?>">
+                                        <option value="csv" <?php selected(OLISSGS_Options::get('export_format', 'csv'), 'csv'); ?>>CSV</option>
+                                        <option value="xlsx" <?php selected(OLISSGS_Options::get('export_format', 'csv'), 'xlsx'); ?>>XLSX</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="olissgs_filename_mode"><?php esc_html_e('Filename', 'sftp-sync-for-google-sheets'); ?></label></th>
+                                <td>
+                                    <select id="olissgs_filename_mode" name="<?php echo esc_attr(OLISSGS_Options::key('filename_mode')); ?>">
+                                        <option value="dated" <?php selected(OLISSGS_Options::get('filename_mode', 'dated'), 'dated'); ?>><?php esc_html_e('Dated (new file each export)', 'sftp-sync-for-google-sheets'); ?></option>
+                                        <option value="overwrite" <?php selected(OLISSGS_Options::get('filename_mode', 'dated'), 'overwrite'); ?>><?php esc_html_e('Overwrite (same filename)', 'sftp-sync-for-google-sheets'); ?></option>
+                                    </select>
+                                    <p class="description"><?php esc_html_e('Preview:', 'sftp-sync-for-google-sheets'); ?> <code id="olissgs-filename-preview"></code></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="olissgs_base_filename"><?php esc_html_e('Base filename', 'sftp-sync-for-google-sheets'); ?></label></th>
+                                <td>
+                                    <input type="text" id="olissgs_base_filename" name="<?php echo esc_attr(OLISSGS_Options::key('base_filename')); ?>"
+                                           value="<?php echo esc_attr(OLISSGS_Options::get('base_filename', 'sheet_export')); ?>"
+                                           class="regular-text" placeholder="sheet_export">
+                                </td>
+                            </tr>
+                        </table>
+                    </details>
                 </div>
 
-                <div class="olissgs-section olissgs-panel" data-olissgs-panel="2" id="olissgs-step-2" hidden>
-                    <h2><?php esc_html_e('Export Settings', 'sftp-sync-for-google-sheets'); ?></h2>
-                    <p><?php esc_html_e('Step 2 of 3 — these values are embedded in the generated Apps Script.', 'sftp-sync-for-google-sheets'); ?></p>
+                <div class="olissgs-section" id="olissgs-step-2">
+                    <h2><?php esc_html_e('2. Google Sheets', 'sftp-sync-for-google-sheets'); ?></h2>
+                    <?php if (!$show_google) : ?>
+                        <p><?php esc_html_e('Configure and test the SFTP server first.', 'sftp-sync-for-google-sheets'); ?></p>
+                        <input type="hidden" name="<?php echo esc_attr(OLISSGS_Options::key('schedule')); ?>" value="<?php echo esc_attr($schedule); ?>">
+                        <input type="hidden" name="<?php echo esc_attr(OLISSGS_Options::key('daily_hour')); ?>" value="<?php echo esc_attr((string) OLISSGS_Options::get('daily_hour', 2)); ?>">
+                    <?php else : ?>
+                        <table class="form-table">
+                            <tr>
+                                <th><label for="olissgs_schedule"><?php esc_html_e('Frequency', 'sftp-sync-for-google-sheets'); ?></label></th>
+                                <td>
+                                    <select id="olissgs_schedule" name="<?php echo esc_attr(OLISSGS_Options::key('schedule')); ?>">
+                                        <option value="daily" <?php selected($schedule, 'daily'); ?>><?php esc_html_e('Every day', 'sftp-sync-for-google-sheets'); ?></option>
+                                        <option value="hourly" <?php selected($schedule, 'hourly'); ?>><?php esc_html_e('Every hour', 'sftp-sync-for-google-sheets'); ?></option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr id="olissgs-daily-hour-row" <?php echo $schedule === 'daily' ? '' : ' hidden'; ?>>
+                                <th><label for="olissgs_daily_hour"><?php esc_html_e('Send at', 'sftp-sync-for-google-sheets'); ?></label></th>
+                                <td>
+                                    <select id="olissgs_daily_hour" name="<?php echo esc_attr(OLISSGS_Options::key('daily_hour')); ?>">
+                                        <?php for ($h = 0; $h < 24; $h++) : ?>
+                                        <option value="<?php echo esc_attr($h); ?>" <?php selected((int) OLISSGS_Options::get('daily_hour', 2), $h); ?>>
+                                            <?php echo esc_html(sprintf('%02d:00', $h)); ?>
+                                        </option>
+                                        <?php endfor; ?>
+                                    </select>
+                                    <p class="description"><?php esc_html_e('Timezone of the Google account that runs the script.', 'sftp-sync-for-google-sheets'); ?></p>
+                                </td>
+                            </tr>
+                        </table>
 
-                    <table class="form-table">
-                        <tr>
-                            <th><label for="olissgs_schedule"><?php esc_html_e('Schedule', 'sftp-sync-for-google-sheets'); ?></label></th>
-                            <td>
-                                <select id="olissgs_schedule" name="<?php echo esc_attr(OLISSGS_Options::key('schedule')); ?>">
-                                    <option value="daily" <?php selected(OLISSGS_Options::get('schedule', 'daily'), 'daily'); ?>><?php esc_html_e('Daily', 'sftp-sync-for-google-sheets'); ?></option>
-                                    <option value="hourly" <?php selected(OLISSGS_Options::get('schedule', 'daily'), 'hourly'); ?>><?php esc_html_e('Hourly', 'sftp-sync-for-google-sheets'); ?></option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr id="olissgs-daily-hour-row">
-                            <th><label for="olissgs_daily_hour"><?php esc_html_e('Daily Export Hour', 'sftp-sync-for-google-sheets'); ?></label></th>
-                            <td>
-                                <select id="olissgs_daily_hour" name="<?php echo esc_attr(OLISSGS_Options::key('daily_hour')); ?>">
-                                    <?php for ($h = 0; $h < 24; $h++) : ?>
-                                    <option value="<?php echo esc_attr($h); ?>" <?php selected((int) OLISSGS_Options::get('daily_hour', 2), $h); ?>>
-                                        <?php echo esc_html(sprintf('%02d:00', $h)); ?>
-                                    </option>
-                                    <?php endfor; ?>
-                                </select>
-                                <p class="description"><?php esc_html_e('Hour of day to run export (in your timezone).', 'sftp-sync-for-google-sheets'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="olissgs_filename_mode"><?php esc_html_e('Filename Mode', 'sftp-sync-for-google-sheets'); ?></label></th>
-                            <td>
-                                <select id="olissgs_filename_mode" name="<?php echo esc_attr(OLISSGS_Options::key('filename_mode')); ?>">
-                                    <option value="dated" <?php selected(OLISSGS_Options::get('filename_mode', 'dated'), 'dated'); ?>><?php esc_html_e('Dated (new file each export)', 'sftp-sync-for-google-sheets'); ?></option>
-                                    <option value="overwrite" <?php selected(OLISSGS_Options::get('filename_mode', 'dated'), 'overwrite'); ?>><?php esc_html_e('Overwrite (same filename)', 'sftp-sync-for-google-sheets'); ?></option>
-                                </select>
-                                <p class="description">
-                                    <strong><?php esc_html_e('Dated:', 'sftp-sync-for-google-sheets'); ?></strong> <?php esc_html_e('Creates files like sheet_export_2026-01-07_120000.csv', 'sftp-sync-for-google-sheets'); ?><br>
-                                    <strong><?php esc_html_e('Overwrite:', 'sftp-sync-for-google-sheets'); ?></strong> <?php esc_html_e('Always uses the same filename, replacing the previous file', 'sftp-sync-for-google-sheets'); ?>
+                        <p class="submit"><?php submit_button(__('Save Settings', 'sftp-sync-for-google-sheets'), 'secondary', 'submit', false); ?></p>
+
+                        <ol class="olissgs-guide">
+                            <li><?php esc_html_e('In the sheet: Extensions › Apps Script.', 'sftp-sync-for-google-sheets'); ?></li>
+                            <li>
+                                <?php esc_html_e('Paste this code:', 'sftp-sync-for-google-sheets'); ?>
+                                <p>
+                                    <button type="button" class="button" data-olissgs-copy-target="olissgs-apps-script" data-olissgs-mark-copied="1">
+                                        <?php esc_html_e('Copy script', 'sftp-sync-for-google-sheets'); ?>
+                                    </button>
+                                    <span class="olissgs-copy-feedback" hidden></span>
                                 </p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="olissgs_base_filename"><?php esc_html_e('Base Filename', 'sftp-sync-for-google-sheets'); ?></label></th>
-                            <td>
-                                <input type="text" id="olissgs_base_filename" name="<?php echo esc_attr(OLISSGS_Options::key('base_filename')); ?>"
-                                       value="<?php echo esc_attr(OLISSGS_Options::get('base_filename', 'sheet_export')); ?>"
-                                       class="regular-text" placeholder="sheet_export">
-                                <p class="description"><?php esc_html_e('Base name for exported files (without extension).', 'sftp-sync-for-google-sheets'); ?></p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th><label for="olissgs_export_format"><?php esc_html_e('Export Format', 'sftp-sync-for-google-sheets'); ?></label></th>
-                            <td>
-                                <select id="olissgs_export_format" name="<?php echo esc_attr(OLISSGS_Options::key('export_format')); ?>">
-                                    <option value="csv" <?php selected(OLISSGS_Options::get('export_format', 'csv'), 'csv'); ?>>CSV</option>
-                                    <option value="xlsx" <?php selected(OLISSGS_Options::get('export_format', 'csv'), 'xlsx'); ?>>XLSX (Excel)</option>
-                                </select>
-                            </td>
-                        </tr>
-                    </table>
-                    <p class="olissgs-step-actions">
-                        <button type="button" class="button" data-olissgs-goto="1"><?php esc_html_e('Back', 'sftp-sync-for-google-sheets'); ?></button>
-                        <?php submit_button(esc_html__('Save Settings', 'sftp-sync-for-google-sheets'), 'primary', 'submit', false); ?>
-                        <button type="button" class="button button-secondary" data-olissgs-goto="3"><?php esc_html_e('Next: Google Apps Script', 'sftp-sync-for-google-sheets'); ?></button>
-                    </p>
+                                <textarea id="olissgs-apps-script" class="olissgs-apps-script" readonly aria-label="<?php esc_attr_e('Google Apps Script', 'sftp-sync-for-google-sheets'); ?>"><?php echo esc_textarea($this->get_apps_script_template()); ?></textarea>
+                            </li>
+                            <li><?php esc_html_e('Run setupTrigger() once and authorize access.', 'sftp-sync-for-google-sheets'); ?></li>
+                        </ol>
+
+                        <details class="olissgs-advanced">
+                            <summary><?php esc_html_e('Advanced', 'sftp-sync-for-google-sheets'); ?></summary>
+                            <table class="form-table">
+                                <tr>
+                                    <th><?php esc_html_e('Endpoint URL', 'sftp-sync-for-google-sheets'); ?></th>
+                                    <td>
+                                        <code class="olissgs-endpoint"><?php echo esc_url($endpoint_url); ?></code>
+                                        <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($endpoint_url); ?>">
+                                            <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><?php esc_html_e('API Key', 'sftp-sync-for-google-sheets'); ?></th>
+                                    <td>
+                                        <code class="olissgs-api-key"><?php echo esc_html($api_key); ?></code>
+                                        <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($api_key); ?>">
+                                            <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
+                                        </button>
+                                        <p class="description">
+                                            <button type="submit" form="olissgs-regen-form" name="olissgs_regenerate_api_key" class="button button-small" data-olissgs-confirm="<?php echo esc_attr__('The current script will stop working.', 'sftp-sync-for-google-sheets'); ?>">
+                                                <?php esc_html_e('Regenerate key', 'sftp-sync-for-google-sheets'); ?>
+                                            </button>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </details>
+                    <?php endif; ?>
                 </div>
             </form>
 
-            <div class="olissgs-section olissgs-panel" data-olissgs-panel="3" id="olissgs-step-3" hidden>
-                <h2><?php esc_html_e('Connect Google Sheets', 'sftp-sync-for-google-sheets'); ?></h2>
-                <p><?php esc_html_e('Step 3 of 3 — copy the endpoint and script into your Google Sheet.', 'sftp-sync-for-google-sheets'); ?></p>
+            <?php if ($show_google) : ?>
+                <form id="olissgs-regen-form" method="post" class="olissgs-regen">
+                    <?php wp_nonce_field('olissgs_regenerate_key'); ?>
+                </form>
+            <?php endif; ?>
 
-                <table class="form-table">
-                    <tr>
-                        <th><?php esc_html_e('Endpoint URL', 'sftp-sync-for-google-sheets'); ?></th>
-                        <td>
-                            <code class="olissgs-endpoint"><?php echo esc_url($endpoint_url); ?></code>
-                            <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($endpoint_url); ?>">
-                                <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><?php esc_html_e('API Key', 'sftp-sync-for-google-sheets'); ?></th>
-                        <td>
-                            <code class="olissgs-api-key"><?php echo esc_html($api_key); ?></code>
-                            <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($api_key); ?>">
-                                <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
-                            </button>
-                            <form method="post" class="olissgs-inline-form">
-                                <?php wp_nonce_field('olissgs_regenerate_key'); ?>
-                                <button type="submit" name="olissgs_regenerate_api_key" class="button button-small" data-olissgs-confirm="<?php echo esc_attr(__('Are you sure? You will need to update your Google Apps Script.', 'sftp-sync-for-google-sheets')); ?>">
-                                    <?php esc_html_e('Regenerate', 'sftp-sync-for-google-sheets'); ?>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                </table>
-
-                <h3><?php esc_html_e('Google Apps Script', 'sftp-sync-for-google-sheets'); ?></h3>
-                <p><?php esc_html_e('Copy the code below into your Google Sheet\'s Apps Script editor (Extensions → Apps Script):', 'sftp-sync-for-google-sheets'); ?></p>
-                <p>
-                    <button type="button" class="button" data-olissgs-show="olissgs-apps-script">
-                        <?php esc_html_e('Show Google Apps Script Code', 'sftp-sync-for-google-sheets'); ?>
-                    </button>
-                </p>
-                <textarea id="olissgs-apps-script" class="olissgs-apps-script" hidden readonly><?php echo esc_textarea($this->get_apps_script_template()); ?></textarea>
-
-                <h3><?php esc_html_e('Recent Logs', 'sftp-sync-for-google-sheets'); ?></h3>
+            <div class="olissgs-section" id="olissgs-step-3">
+                <h2><?php esc_html_e('3. Activity', 'sftp-sync-for-google-sheets'); ?></h2>
                 <form method="post" class="olissgs-clear-logs">
                     <?php wp_nonce_field('olissgs_clear_logs'); ?>
-                    <button type="submit" name="olissgs_clear_logs" class="button button-small">
-                        <?php esc_html_e('Clear Logs', 'sftp-sync-for-google-sheets'); ?>
+                    <button type="submit" name="olissgs_clear_logs" class="button button-small" data-olissgs-confirm="<?php echo esc_attr__('Clear the activity log?', 'sftp-sync-for-google-sheets'); ?>">
+                        <?php esc_html_e('Clear log', 'sftp-sync-for-google-sheets'); ?>
                     </button>
                 </form>
-                <div class="olissgs-logs">
-                    <?php
-                    $logs = OLISSGS_Plugin::get_logs(50);
-                    if (empty($logs)) {
-                        echo '<span class="log-info">' . esc_html__('No logs yet.', 'sftp-sync-for-google-sheets') . '</span>';
-                    } else {
-                        foreach ($logs as $log) {
-                            $class = 'log-info';
-                            if (strpos($log, '[error]') !== false) {
-                                $class = 'log-error';
-                            } elseif (strpos($log, '[success]') !== false) {
-                                $class = 'log-success';
-                            }
-                            echo '<div class="' . esc_attr($class) . '">' . esc_html($log) . '</div>';
-                        }
-                    }
-                    ?>
-                </div>
-                <p class="olissgs-step-actions">
-                    <button type="button" class="button" data-olissgs-goto="2"><?php esc_html_e('Back', 'sftp-sync-for-google-sheets'); ?></button>
-                </p>
+                <?php if (empty($logs)) : ?>
+                    <p><?php esc_html_e('No sends yet. The first will appear here after the script runs.', 'sftp-sync-for-google-sheets'); ?></p>
+                <?php else : ?>
+                    <table class="widefat striped">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e('Date', 'sftp-sync-for-google-sheets'); ?></th>
+                                <th><?php esc_html_e('Status', 'sftp-sync-for-google-sheets'); ?></th>
+                                <th><?php esc_html_e('Message', 'sftp-sync-for-google-sheets'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($logs as $row) : ?>
+                                <?php
+                                $status_label = __('Info', 'sftp-sync-for-google-sheets');
+                                $status_icon  = 'info';
+                                if ($row['type'] === 'success') {
+                                    $status_label = __('Success', 'sftp-sync-for-google-sheets');
+                                    $status_icon  = 'yes-alt';
+                                } elseif ($row['type'] === 'error') {
+                                    $status_label = __('Error', 'sftp-sync-for-google-sheets');
+                                    $status_icon  = 'dismiss';
+                                }
+                                $date_display = $row['datetime'];
+                                $ts           = $row['datetime'] !== '' ? strtotime($row['datetime']) : false;
+                                if ($ts) {
+                                    $date_display = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $ts);
+                                }
+                                ?>
+                                <tr>
+                                    <td><?php echo esc_html($date_display); ?></td>
+                                    <td>
+                                        <span class="dashicons dashicons-<?php echo esc_attr($status_icon); ?>" aria-hidden="true"></span>
+                                        <?php echo esc_html($status_label); ?>
+                                    </td>
+                                    <td><?php echo esc_html($row['message']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
             </div>
-
-            <p class="description olissgs-footer-note">
-                <?php
-                echo wp_kses(
-                    sprintf(
-                        /* translators: %s: donate URL */
-                        __('If this plugin helps you, please consider a <a href="%s" target="_blank" rel="noopener noreferrer">donation</a>. Thank you!', 'sftp-sync-for-google-sheets'),
-                        esc_url(OLISSGS_DONATE_URL)
-                    ),
-                    [
-                        'a' => [
-                            'href'   => true,
-                            'target' => true,
-                            'rel'    => true,
-                        ],
-                    ]
-                );
-                ?>
-            </p>
         </div>
         <?php
     }
 
     /**
-     * Run an SFTP connection test with saved settings.
+     * Run an SFTP connection test with saved settings and store the result.
      */
     private function test_connection() {
         $handler = OLISSGS_SFTP_Handler::get_instance();
         $result  = $handler->test_connection();
 
+        OLISSGS_Options::update(
+            'last_test',
+            [
+                'success' => !empty($result['success']),
+                'message' => (string) $result['message'],
+                'time'    => time(),
+            ],
+            false
+        );
+
         if ($result['success']) {
-            echo '<div class="notice notice-success"><p>' . esc_html($result['message']) . '</p></div>';
             OLISSGS_Plugin::log('SFTP connection test successful', 'success');
         } else {
-            echo '<div class="notice notice-error"><p>' . esc_html($result['message']) . '</p></div>';
             OLISSGS_Plugin::log('SFTP connection test failed: ' . $result['message'], 'error');
         }
     }
