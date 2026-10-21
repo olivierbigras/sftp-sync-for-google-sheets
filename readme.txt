@@ -5,7 +5,7 @@ Plugin URI: https://olivierbigras.com
 Tags: google sheets, sftp, sync, automation, csv
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.5.4
+Stable tag: 1.6.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -76,6 +76,38 @@ Yes. All requests require a valid API key. The key is auto-generated on activati
 
 Yes! Each Google Sheet can have its own Apps Script. They can all point to the same WordPress endpoint.
 
+= Will my settings be kept when I update to 1.6.0? =
+
+Yes. The 10 settings (host, port, username, password, remote path, schedule, daily hour, filename mode, base filename, export format), plus the API key and encryption key, are copied to the new `olissgs_*` option names and the old keys are then removed.
+
+== External services ==
+
+This plugin talks to the following external systems. None of these calls are hidden: SFTP is the feature you configure, Google runs only in the Apps Script you paste yourself, and PayPal opens only if you click Donate.
+
+**User-configured SFTP server**
+
+The plugin connects to the SFTP host, port, username, and remote path you save in Settings → SFTP Sync. A connection is opened when (1) a file is received on the REST upload endpoint, or (2) an administrator clicks “Test SFTP Connection”. The plugin sends the stored SFTP credentials and the uploaded file contents to that host. No data is sent to the plugin author. Terms and privacy depend on the SFTP provider you choose.
+
+**Google Sheets / Google Apps Script (optional, user-installed)**
+
+The WordPress plugin does not call Google from your server. It generates a Google Apps Script that you may paste into a Google Sheet (Extensions → Apps Script). When you run that script (manually or via a trigger you create), it:
+
+1. Calls Google’s spreadsheet export API (`https://docs.google.com/spreadsheets/d/{id}/export`) using your Google account’s OAuth token, to download CSV or XLSX content.
+2. Sends that file (base64), a filename, a timestamp, and your plugin API key to your WordPress site over HTTPS (`X-API-Key` header and JSON body).
+
+Google receives your spreadsheet ID and account token for the export. Your WordPress site receives the exported file and API key. If you never install the generated script, no Google call is made.
+
+* Terms of Service: https://policies.google.com/terms
+* Privacy Policy: https://policies.google.com/privacy
+* Google APIs Terms: https://developers.google.com/terms
+
+**PayPal (optional donate links)**
+
+Donate links on the Plugins screen, the settings page, and the plugin meta row open PayPal only when a user chooses to click them. The plugin does not send visitor or site data to PayPal automatically.
+
+* User Agreement: https://www.paypal.com/legalhub/useragreement-full
+* Privacy Statement: https://www.paypal.com/legalhub/privacy-full
+
 == Screenshots ==
 
 1. Plugin settings page with API endpoint information and SFTP server configuration
@@ -83,6 +115,14 @@ Yes! Each Google Sheet can have its own Apps Script. They can all point to the s
 3. Activity logs and Google Apps Script code generator
 
 == Changelog ==
+
+= 1.6.0 =
+* WordPress.org readiness: unique `olissgs_` prefix for functions, classes, options, transients, hooks, and script/style handles
+* Lossless upgrade: copies the 10 settings (and API / encryption keys) from `gsheet_sftp_*` to `olissgs_*`, then deletes the old options
+* Existing REST namespace `gsheet-sftp/v1` kept so deployed Google Apps Scripts keep working; `olissgs/v1` registered as an alias
+* Admin CSS/JS moved to enqueued files (no inline script, style, or onclick handlers)
+* Documented external services (SFTP, Google Apps Script, PayPal) in the readme
+* Slug and text domain unchanged: `sftp-sync-for-google-sheets`
 
 = 1.5.4 =
 * Maintenance: GitHub links updated to github.com/olivierbigras (account renamed from bigrat95). No functional change.
@@ -147,6 +187,9 @@ Yes! Each Google Sheet can have its own Apps Script. They can all point to the s
 * Google Apps Script generator
 
 == Upgrade Notice ==
+
+= 1.6.0 =
+WordPress.org compliance update. Your SFTP settings and API key are migrated automatically. Existing Google Apps Scripts keep working.
 
 = 1.5.4 =
 Maintenance release: GitHub links updated. No functional change.

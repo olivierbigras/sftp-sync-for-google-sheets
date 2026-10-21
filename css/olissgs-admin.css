@@ -1,0 +1,80 @@
+.olissgs-wrap {
+	max-width: 800px;
+}
+
+.olissgs-wrap .form-table th {
+	width: 200px;
+}
+
+.olissgs-api-key {
+	font-family: monospace;
+	background: #f0f0f1;
+	padding: 8px 12px;
+	border-radius: 4px;
+}
+
+.olissgs-endpoint {
+	font-family: monospace;
+	background: #e7f3e7;
+	padding: 8px 12px;
+	border-radius: 4px;
+	word-break: break-all;
+}
+
+.olissgs-section {
+	background: #fff;
+	padding: 20px;
+	border: 1px solid #ccd0d4;
+	margin: 20px 0;
+}
+
+.olissgs-logs {
+	max-height: 300px;
+	overflow-y: auto;
+	background: #1e1e1e;
+	color: #d4d4d4;
+	padding: 15px;
+	font-family: monospace;
+	font-size: 12px;
+}
+
+.olissgs-logs .log-success {
+	color: #4ec9b0;
+}
+
+.olissgs-logs .log-error {
+	color: #f14c4c;
+}
+
+.olissgs-logs .log-info {
+	color: #569cd6;
+}
+
+.olissgs-inline-form {
+	display: inline;
+	margin-left: 10px;
+}
+
+.olissgs-error-text {
+	color: #d63638;
+}
+
+.olissgs-clear-logs {
+	margin-bottom: 10px;
+}
+
+.olissgs-apps-script {
+	display: none;
+	width: 100%;
+	height: 400px;
+	font-family: monospace;
+	font-size: 12px;
+}
+
+.olissgs-apps-script.is-visible {
+	display: block;
+}
+
+.olissgs-footer-note {
+	margin-top: 20px;
+}

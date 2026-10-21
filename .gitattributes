@@ -3,3 +3,6 @@
 .gitattributes export-ignore
 .github/ export-ignore
 assets/ export-ignore
+tests/ export-ignore
+CHANGELOG.md export-ignore
+README.md export-ignore

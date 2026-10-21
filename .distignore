@@ -4,7 +4,9 @@
 .gitignore
 .distignore
 README.md
+CHANGELOG.md
 assets/
+tests/
 composer.json
 composer.lock
 node_modules/
