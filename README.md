@@ -274,6 +274,7 @@ You can create multiple Apps Scripts in the same sheet, each pointing to a diffe
 ### 1.6.0
 - WordPress.org readiness: unique `olissgs_` prefix; lossless migration of the 10 settings from `gsheet_sftp_*`
 - Existing REST endpoint `gsheet-sftp/v1` kept; admin CSS/JS extracted to files
+- Settings screen in 3 steps, Save and Test, single donate link
 - External services documented in readme.txt
 
 ### 1.5.2

@@ -78,3 +78,19 @@
 .olissgs-footer-note {
 	margin-top: 20px;
 }
+
+.olissgs-steps {
+	margin: 16px 0 0;
+}
+
+.olissgs-step-actions {
+	margin-top: 16px;
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.olissgs-panel[hidden] {
+	display: none;
+}

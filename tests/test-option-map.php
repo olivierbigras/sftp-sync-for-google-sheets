@@ -153,5 +153,14 @@ if ($failed > 0) {
     exit(1);
 }
 
+$admin = file_get_contents(dirname(__DIR__) . '/includes/class-admin-settings.php');
+foreach (array_keys($map) as $name) {
+    $field = 'OLISSGS_Options::key(\'' . $name . '\')';
+    olissgs_assert(strpos($admin, $field) !== false, "settings page still registers field {$name}");
+}
+olissgs_assert(strpos($admin, 'Save and Test') !== false, 'Save and Test button is present');
+olissgs_assert(substr_count($admin, 'data-olissgs-panel') >= 3, 'settings page has 3 step panels');
+olissgs_assert(substr_count($admin, 'OLISSGS_DONATE_URL') === 1, 'settings page has a single donate call');
+
 echo "\nAll option-map checks passed.\n";
 exit(0);

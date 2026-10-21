@@ -21,21 +21,52 @@
 		}
 	}
 
+	function showStep(step) {
+		step = parseInt(step, 10);
+		if (step < 1 || step > 3) {
+			step = 1;
+		}
+
+		document.querySelectorAll('[data-olissgs-panel]').forEach(function (panel) {
+			var active = parseInt(panel.getAttribute('data-olissgs-panel'), 10) === step;
+			panel.hidden = !active;
+		});
+
+		document.querySelectorAll('[data-olissgs-step]').forEach(function (tab) {
+			var active = parseInt(tab.getAttribute('data-olissgs-step'), 10) === step;
+			tab.classList.toggle('nav-tab-active', active);
+			tab.setAttribute('aria-current', active ? 'step' : 'false');
+		});
+
+		var stepField = document.getElementById('olissgs_step_field');
+		if (stepField) {
+			stepField.value = String(step);
+		}
+
+		if (window.history && window.history.replaceState) {
+			try {
+				var url = new URL(window.location.href);
+				url.searchParams.set('olissgs_step', String(step));
+				window.history.replaceState({}, '', url.toString());
+			} catch (e) {
+				// Ignore URL update failures.
+			}
+		}
+	}
+
 	onReady(function () {
-		var notice = document.querySelector('.olissgs-donate-notice');
-		if (notice && config.ajaxUrl) {
-			notice.addEventListener('click', function (e) {
-				if (!e.target.classList.contains('notice-dismiss')) {
+		showStep(config.initialStep || 1);
+
+		document.querySelectorAll('[data-olissgs-step], [data-olissgs-goto]').forEach(function (el) {
+			el.addEventListener('click', function (e) {
+				var step = el.getAttribute('data-olissgs-goto') || el.getAttribute('data-olissgs-step');
+				if (!step) {
 					return;
 				}
-				var body = new FormData();
-				body.append('action', 'olissgs_dismiss_donate');
-				body.append('nonce', config.donateNonce || '');
-				if (window.fetch) {
-					fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' });
-				}
+				e.preventDefault();
+				showStep(step);
 			});
-		}
+		});
 
 		var scheduleSelect = document.getElementById('olissgs_schedule');
 		var dailyHourRow = document.getElementById('olissgs-daily-hour-row');

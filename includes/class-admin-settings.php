@@ -70,6 +70,45 @@ class OLISSGS_Admin_Settings {
             'sanitize_callback' => [$this, 'sanitize_export_format'],
             'default'           => 'csv',
         ]);
+
+        $this->maybe_queue_connection_test();
+        add_filter('wp_redirect', [$this, 'preserve_step_on_settings_save']);
+    }
+
+    /**
+     * Keep the current wizard step after options.php redirects.
+     *
+     * @param string $location Redirect URL.
+     * @return string
+     */
+    public function preserve_step_on_settings_save($location) {
+        if (!is_admin() || !current_user_can('manage_options')) {
+            return $location;
+        }
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'olissgs_settings-options')) {
+            return $location;
+        }
+        if (empty($_POST['option_page']) || sanitize_text_field(wp_unslash($_POST['option_page'])) !== 'olissgs_settings') {
+            return $location;
+        }
+        $step = isset($_POST['olissgs_step']) ? absint(wp_unslash($_POST['olissgs_step'])) : 1;
+        if ($step < 1 || $step > 3) {
+            $step = 1;
+        }
+        return add_query_arg('olissgs_step', $step, $location);
+    }
+
+    /**
+     * After "Save and Test", run the SFTP test on the next settings-page load.
+     */
+    private function maybe_queue_connection_test() {
+        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'olissgs_settings-options')) {
+            return;
+        }
+        if (empty($_POST['olissgs_save_and_test']) || !current_user_can('manage_options')) {
+            return;
+        }
+        set_transient('olissgs_test_after_save_' . get_current_user_id(), 1, 120);
     }
 
     /**
@@ -261,7 +300,8 @@ class OLISSGS_Admin_Settings {
             return;
         }
 
-        if (isset($_POST['olissgs_test_sftp']) && check_admin_referer('olissgs_test_connection')) {
+        if (get_transient('olissgs_test_after_save_' . get_current_user_id())) {
+            delete_transient('olissgs_test_after_save_' . get_current_user_id());
             $this->test_connection();
         }
 
@@ -293,47 +333,23 @@ class OLISSGS_Admin_Settings {
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
             <?php if ($password_needs_reentry) : ?>
                 <div class="notice notice-error">
-                    <p><?php esc_html_e('The saved SFTP password could not be decrypted. This usually happens after WordPress security keys/salts are rotated (for example by Solid Security). Re-enter the SFTP password below and click Save Settings, then test the connection.', 'sftp-sync-for-google-sheets'); ?></p>
+                    <p><?php esc_html_e('The saved SFTP password could not be decrypted. This usually happens after WordPress security keys/salts are rotated (for example by Solid Security). Re-enter the SFTP password below and click Save and Test.', 'sftp-sync-for-google-sheets'); ?></p>
                 </div>
             <?php endif; ?>
 
-            <div class="olissgs-section">
-                <h2><?php esc_html_e('API Endpoint Information', 'sftp-sync-for-google-sheets'); ?></h2>
-                <p><?php esc_html_e('Use these details in your Google Apps Script:', 'sftp-sync-for-google-sheets'); ?></p>
-
-                <table class="form-table">
-                    <tr>
-                        <th><?php esc_html_e('Endpoint URL', 'sftp-sync-for-google-sheets'); ?></th>
-                        <td>
-                            <code class="olissgs-endpoint"><?php echo esc_url($endpoint_url); ?></code>
-                            <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($endpoint_url); ?>">
-                                <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><?php esc_html_e('API Key', 'sftp-sync-for-google-sheets'); ?></th>
-                        <td>
-                            <code class="olissgs-api-key"><?php echo esc_html($api_key); ?></code>
-                            <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($api_key); ?>">
-                                <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
-                            </button>
-                            <form method="post" class="olissgs-inline-form">
-                                <?php wp_nonce_field('olissgs_regenerate_key'); ?>
-                                <button type="submit" name="olissgs_regenerate_api_key" class="button button-small" data-olissgs-confirm="<?php echo esc_attr(__('Are you sure? You will need to update your Google Apps Script.', 'sftp-sync-for-google-sheets')); ?>">
-                                    <?php esc_html_e('Regenerate', 'sftp-sync-for-google-sheets'); ?>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                </table>
-            </div>
+            <nav class="nav-tab-wrapper olissgs-steps" aria-label="<?php esc_attr_e('Setup steps', 'sftp-sync-for-google-sheets'); ?>">
+                <a href="#olissgs-step-1" class="nav-tab nav-tab-active" data-olissgs-step="1"><?php esc_html_e('1. SFTP server', 'sftp-sync-for-google-sheets'); ?></a>
+                <a href="#olissgs-step-2" class="nav-tab" data-olissgs-step="2"><?php esc_html_e('2. Export', 'sftp-sync-for-google-sheets'); ?></a>
+                <a href="#olissgs-step-3" class="nav-tab" data-olissgs-step="3"><?php esc_html_e('3. Google Apps Script', 'sftp-sync-for-google-sheets'); ?></a>
+            </nav>
 
             <form method="post" action="options.php">
                 <?php settings_fields('olissgs_settings'); ?>
+                <input type="hidden" name="olissgs_step" id="olissgs_step_field" value="1">
 
-                <div class="olissgs-section">
+                <div class="olissgs-section olissgs-panel" data-olissgs-panel="1" id="olissgs-step-1">
                     <h2><?php esc_html_e('SFTP Server Settings', 'sftp-sync-for-google-sheets'); ?></h2>
+                    <p><?php esc_html_e('Step 1 of 3 — enter the server that should receive exported files.', 'sftp-sync-for-google-sheets'); ?></p>
 
                     <table class="form-table">
                         <tr>
@@ -383,11 +399,15 @@ class OLISSGS_Admin_Settings {
                             </td>
                         </tr>
                     </table>
+                    <p class="olissgs-step-actions">
+                        <?php submit_button(esc_html__('Save and Test', 'sftp-sync-for-google-sheets'), 'primary', 'olissgs_save_and_test', false); ?>
+                        <button type="button" class="button button-secondary" data-olissgs-goto="2"><?php esc_html_e('Next: Export', 'sftp-sync-for-google-sheets'); ?></button>
+                    </p>
                 </div>
 
-                <div class="olissgs-section">
+                <div class="olissgs-section olissgs-panel" data-olissgs-panel="2" id="olissgs-step-2" hidden>
                     <h2><?php esc_html_e('Export Settings', 'sftp-sync-for-google-sheets'); ?></h2>
-                    <p><?php esc_html_e('Configure how the Google Sheet export works. These settings are embedded in the generated Apps Script.', 'sftp-sync-for-google-sheets'); ?></p>
+                    <p><?php esc_html_e('Step 2 of 3 — these values are embedded in the generated Apps Script.', 'sftp-sync-for-google-sheets'); ?></p>
 
                     <table class="form-table">
                         <tr>
@@ -444,24 +464,55 @@ class OLISSGS_Admin_Settings {
                             </td>
                         </tr>
                     </table>
+                    <p class="olissgs-step-actions">
+                        <button type="button" class="button" data-olissgs-goto="1"><?php esc_html_e('Back', 'sftp-sync-for-google-sheets'); ?></button>
+                        <?php submit_button(esc_html__('Save Settings', 'sftp-sync-for-google-sheets'), 'primary', 'submit', false); ?>
+                        <button type="button" class="button button-secondary" data-olissgs-goto="3"><?php esc_html_e('Next: Google Apps Script', 'sftp-sync-for-google-sheets'); ?></button>
+                    </p>
                 </div>
-
-                <?php submit_button(esc_html__('Save Settings', 'sftp-sync-for-google-sheets')); ?>
             </form>
 
-            <div class="olissgs-section">
-                <h2><?php esc_html_e('Test Connection', 'sftp-sync-for-google-sheets'); ?></h2>
-                <p><?php esc_html_e('Test your SFTP connection with the currently saved settings. Click Save Settings first if you changed the password or server details.', 'sftp-sync-for-google-sheets'); ?></p>
-                <form method="post">
-                    <?php wp_nonce_field('olissgs_test_connection'); ?>
-                    <button type="submit" name="olissgs_test_sftp" class="button button-secondary">
-                        <?php esc_html_e('Test SFTP Connection', 'sftp-sync-for-google-sheets'); ?>
-                    </button>
-                </form>
-            </div>
+            <div class="olissgs-section olissgs-panel" data-olissgs-panel="3" id="olissgs-step-3" hidden>
+                <h2><?php esc_html_e('Connect Google Sheets', 'sftp-sync-for-google-sheets'); ?></h2>
+                <p><?php esc_html_e('Step 3 of 3 — copy the endpoint and script into your Google Sheet.', 'sftp-sync-for-google-sheets'); ?></p>
 
-            <div class="olissgs-section">
-                <h2><?php esc_html_e('Recent Logs', 'sftp-sync-for-google-sheets'); ?></h2>
+                <table class="form-table">
+                    <tr>
+                        <th><?php esc_html_e('Endpoint URL', 'sftp-sync-for-google-sheets'); ?></th>
+                        <td>
+                            <code class="olissgs-endpoint"><?php echo esc_url($endpoint_url); ?></code>
+                            <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($endpoint_url); ?>">
+                                <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('API Key', 'sftp-sync-for-google-sheets'); ?></th>
+                        <td>
+                            <code class="olissgs-api-key"><?php echo esc_html($api_key); ?></code>
+                            <button type="button" class="button button-small" data-olissgs-copy="<?php echo esc_attr($api_key); ?>">
+                                <?php esc_html_e('Copy', 'sftp-sync-for-google-sheets'); ?>
+                            </button>
+                            <form method="post" class="olissgs-inline-form">
+                                <?php wp_nonce_field('olissgs_regenerate_key'); ?>
+                                <button type="submit" name="olissgs_regenerate_api_key" class="button button-small" data-olissgs-confirm="<?php echo esc_attr(__('Are you sure? You will need to update your Google Apps Script.', 'sftp-sync-for-google-sheets')); ?>">
+                                    <?php esc_html_e('Regenerate', 'sftp-sync-for-google-sheets'); ?>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </table>
+
+                <h3><?php esc_html_e('Google Apps Script', 'sftp-sync-for-google-sheets'); ?></h3>
+                <p><?php esc_html_e('Copy the code below into your Google Sheet\'s Apps Script editor (Extensions → Apps Script):', 'sftp-sync-for-google-sheets'); ?></p>
+                <p>
+                    <button type="button" class="button" data-olissgs-show="olissgs-apps-script">
+                        <?php esc_html_e('Show Google Apps Script Code', 'sftp-sync-for-google-sheets'); ?>
+                    </button>
+                </p>
+                <textarea id="olissgs-apps-script" class="olissgs-apps-script" hidden readonly><?php echo esc_textarea($this->get_apps_script_template()); ?></textarea>
+
+                <h3><?php esc_html_e('Recent Logs', 'sftp-sync-for-google-sheets'); ?></h3>
                 <form method="post" class="olissgs-clear-logs">
                     <?php wp_nonce_field('olissgs_clear_logs'); ?>
                     <button type="submit" name="olissgs_clear_logs" class="button button-small">
@@ -486,17 +537,9 @@ class OLISSGS_Admin_Settings {
                     }
                     ?>
                 </div>
-            </div>
-
-            <div class="olissgs-section">
-                <h2><?php esc_html_e('Google Apps Script', 'sftp-sync-for-google-sheets'); ?></h2>
-                <p><?php esc_html_e('Copy the code below into your Google Sheet\'s Apps Script editor (Extensions → Apps Script):', 'sftp-sync-for-google-sheets'); ?></p>
-                <p>
-                    <button type="button" class="button" data-olissgs-show="olissgs-apps-script">
-                        <?php esc_html_e('Show Google Apps Script Code', 'sftp-sync-for-google-sheets'); ?>
-                    </button>
+                <p class="olissgs-step-actions">
+                    <button type="button" class="button" data-olissgs-goto="2"><?php esc_html_e('Back', 'sftp-sync-for-google-sheets'); ?></button>
                 </p>
-                <textarea id="olissgs-apps-script" class="olissgs-apps-script" hidden readonly><?php echo esc_textarea($this->get_apps_script_template()); ?></textarea>
             </div>
 
             <p class="description olissgs-footer-note">

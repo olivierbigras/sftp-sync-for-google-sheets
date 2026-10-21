@@ -68,88 +68,18 @@ class OLISSGS_Plugin {
         add_action('rest_api_init', [$this, 'register_rest_routes']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_filter('plugin_action_links_' . OLISSGS_BASENAME, [$this, 'plugin_action_links']);
-        add_filter('plugin_row_meta', [$this, 'plugin_row_meta'], 10, 2);
-        add_action('admin_notices', [$this, 'donate_notice']);
-        add_action('wp_ajax_olissgs_dismiss_donate', [$this, 'ajax_dismiss_donate']);
     }
 
     /**
-     * Settings + Donate on the Plugins screen.
+     * Settings link on the Plugins screen. Donate is only on the settings page.
      *
      * @param string[] $links Links.
      * @return string[]
      */
     public function plugin_action_links($links) {
         $settings = '<a href="' . esc_url(admin_url('options-general.php?page=' . OLISSGS_SLUG)) . '">' . esc_html__('Settings', 'sftp-sync-for-google-sheets') . '</a>';
-        $donate   = '<a href="' . esc_url(OLISSGS_DONATE_URL) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Donate', 'sftp-sync-for-google-sheets') . '</a>';
-        array_unshift($links, $settings, $donate);
+        array_unshift($links, $settings);
         return $links;
-    }
-
-    /**
-     * Donate in plugin meta row.
-     *
-     * @param string[] $links Links.
-     * @param string   $file  Basename.
-     * @return string[]
-     */
-    public function plugin_row_meta($links, $file) {
-        if ($file !== OLISSGS_BASENAME) {
-            return $links;
-        }
-        $links[] = '<a href="' . esc_url(OLISSGS_DONATE_URL) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Donate', 'sftp-sync-for-google-sheets') . '</a>';
-        return $links;
-    }
-
-    /**
-     * Dismissible support notice on the settings screen.
-     */
-    public function donate_notice() {
-        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        if (!$screen || $screen->id !== 'settings_page_' . OLISSGS_SLUG) {
-            return;
-        }
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-        $user_id = get_current_user_id();
-        if (get_user_meta($user_id, 'olissgs_donate_dismissed', true) || get_user_meta($user_id, 'sftp_sync_gs_donate_dismissed', true)) {
-            return;
-        }
-        ?>
-        <div class="notice notice-info is-dismissible olissgs-donate-notice">
-            <p>
-                <?php
-                echo wp_kses(
-                    sprintf(
-                        /* translators: %s: donate URL */
-                        __('Enjoying SFTP Sync for Google Sheets? <a href="%s" target="_blank" rel="noopener noreferrer">Buy me a coffee</a> — your support keeps the plugin free and maintained.', 'sftp-sync-for-google-sheets'),
-                        esc_url(OLISSGS_DONATE_URL)
-                    ),
-                    [
-                        'a' => [
-                            'href'   => true,
-                            'target' => true,
-                            'rel'    => true,
-                        ],
-                    ]
-                );
-                ?>
-            </p>
-        </div>
-        <?php
-    }
-
-    /**
-     * Persist donate notice dismissal.
-     */
-    public function ajax_dismiss_donate() {
-        check_ajax_referer('olissgs_donate', 'nonce');
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(null, 403);
-        }
-        update_user_meta(get_current_user_id(), 'olissgs_donate_dismissed', 1);
-        wp_send_json_success();
     }
 
     /**
@@ -233,8 +163,7 @@ class OLISSGS_Plugin {
             'olissgs-admin',
             'olissgsAdmin',
             [
-                'ajaxUrl'     => admin_url('admin-ajax.php'),
-                'donateNonce' => wp_create_nonce('olissgs_donate'),
+                'initialStep' => isset($_GET['olissgs_step']) ? min(3, max(1, absint(wp_unslash($_GET['olissgs_step'])))) : 1, // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only wizard step.
             ]
         );
     }
