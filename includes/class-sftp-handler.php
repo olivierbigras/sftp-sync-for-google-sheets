@@ -131,6 +131,7 @@ class OLISSGS_SFTP_Handler {
 
         $remote_file = 'ssh2.sftp://' . $sftp . $remote_path . $filename;
 
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- ssh2.sftp stream, not local disk.
         if (@file_put_contents($remote_file, $file_content) === false) {
             return [
                 'success' => false,

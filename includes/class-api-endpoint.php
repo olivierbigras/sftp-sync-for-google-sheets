@@ -166,9 +166,10 @@ class OLISSGS_API_Endpoint {
             }
         }
 
-        if (empty($file_content) && !empty($_FILES['file'])) {
-            $file = wp_unslash($_FILES['file']);
-            $upload_error = isset($file['error']) ? intval($file['error']) : UPLOAD_ERR_NO_FILE;
+        // REST upload is authenticated by API key in verify_api_key(), not a WP nonce.
+        if (empty($file_content) && isset($_FILES['file'])) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            $uploaded = map_deep(wp_unslash($_FILES['file']), 'sanitize_text_field'); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing
+            $upload_error = isset($uploaded['error']) ? absint($uploaded['error']) : UPLOAD_ERR_NO_FILE;
             if ($upload_error !== UPLOAD_ERR_OK) {
                 OLISSGS_Plugin::log('File upload error: ' . $upload_error, 'error');
                 return new WP_REST_Response([
@@ -177,7 +178,7 @@ class OLISSGS_API_Endpoint {
                 ], 400);
             }
 
-            $tmp_name = isset($file['tmp_name']) ? $file['tmp_name'] : '';
+            $tmp_name = isset($_FILES['file']['tmp_name']) ? $_FILES['file']['tmp_name'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.NonceVerification.Missing -- path checked with is_uploaded_file().
             if ($tmp_name === '' || !is_uploaded_file($tmp_name)) {
                 OLISSGS_Plugin::log('Invalid uploaded file', 'error');
                 return new WP_REST_Response([
@@ -186,8 +187,9 @@ class OLISSGS_API_Endpoint {
                 ], 400);
             }
 
-            $file_content = file_get_contents($tmp_name);
-            $filename     = !empty($file['name']) ? sanitize_file_name($file['name']) : 'export_' . gmdate('Y-m-d_His') . '.csv';
+            // Local tmp upload, not a remote URL.
+            $file_content = file_get_contents($tmp_name); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+            $filename     = !empty($uploaded['name']) ? sanitize_file_name($uploaded['name']) : 'export_' . gmdate('Y-m-d_His') . '.csv';
         }
 
         if (empty($file_content)) {
