@@ -135,8 +135,9 @@ class OLISSGS_Options {
      */
     private static function migrate_user_meta() {
         $users = get_users([
-            'fields'     => 'ID',
-            'meta_key'   => 'sftp_sync_gs_donate_dismissed',
+            'fields'       => 'ID',
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- one-time user-meta migration.
+            'meta_key'     => 'sftp_sync_gs_donate_dismissed',
             'meta_compare' => 'EXISTS',
         ]);
 

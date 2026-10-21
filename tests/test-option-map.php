@@ -178,10 +178,15 @@ olissgs_assert(strpos($sftp, 'unlink(') === false, 'SFTP handler does not call u
 olissgs_assert(strpos($sftp, 'wp_delete_file(') !== false, 'SFTP handler uses wp_delete_file()');
 
 $readme = file_get_contents(dirname(__DIR__) . '/readme.txt');
-olissgs_assert(preg_match('/^Tested up to:\s*7\.1$/m', $readme) === 1, 'readme Tested up to is 7.1');
-olissgs_assert(preg_match('/^Stable tag:\s*1\.6\.1$/m', $readme) === 1, 'readme Stable tag is 1.6.1');
+olissgs_assert(preg_match('/^Tested up to:\s*7\.1\r?$/m', $readme) === 1, 'readme Tested up to is 7.1');
+olissgs_assert(preg_match('/^Stable tag:\s*1\.6\.1\r?$/m', $readme) === 1, 'readme Stable tag is 1.6.1');
 olissgs_assert(strpos($readme, '= 1.6.1 =') !== false, 'readme changelog includes 1.6.1');
 olissgs_assert(strpos($readme, 'github.com/bigrat95') === false, 'readme has no old GitHub account links');
+
+if ($failed > 0) {
+    fwrite(STDERR, "\n{$failed} assertion(s) failed.\n");
+    exit(1);
+}
 
 echo "\nAll option-map checks passed.\n";
 exit(0);
