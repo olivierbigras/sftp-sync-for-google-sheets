@@ -1,15 +1,40 @@
-# Files to exclude from WordPress.org SVN trunk
+# Files to exclude from WordPress.org SVN trunk / plugin ZIP
 .git
+.github
 .gitattributes
 .gitignore
 .distignore
-README.md
-CHANGELOG.md
-assets/
+
+# Internal docs (keep readme.txt)
+*.md
+
+# Dev tooling and scripts
 tests/
+bin/
+phpcs.xml
+phpcs.xml.dist
+.phpcs.xml
+.phpcs.xml.dist
+phpunit.xml
+phpunit.xml.dist
 composer.json
 composer.lock
+composer.phar
+package.json
+package-lock.json
+package*.json
+npm-shrinkwrap.json
 node_modules/
+vendor/
+phpstan.neon
+phpstan.neon.dist
+Makefile
+*.sh
+
+# WordPress.org marketing assets live in SVN /assets, not trunk
+assets/
+
+# Local / IDE
 .DS_Store
 Thumbs.db
 .idea/

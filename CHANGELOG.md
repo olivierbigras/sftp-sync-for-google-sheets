@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.1
+
+- Tested up to WordPress 7.1
+- Use `wp_delete_file()` instead of `unlink()` when cleaning the SFTP write probe
+- Exclude development files from distribution ZIPs (`.distignore` and `export-ignore`)
+
 ## 1.6.0
 
 - WordPress.org readiness: unique `olissgs_` prefix for functions, classes, options, transients, hooks, and script/style handles

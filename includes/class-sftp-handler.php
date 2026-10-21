@@ -336,13 +336,14 @@ class OLISSGS_SFTP_Handler {
         $remote_path = trailingslashit($config['remote_path']);
         $probe       = $remote_path . '.olissgs-write-test';
         $remote_file = 'ssh2.sftp://' . $sftp . $probe;
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- ssh2.sftp stream, not local disk.
         if (@file_put_contents($remote_file, 'ok') === false) {
             return [
                 'success' => false,
                 'message' => 'Connected, but could not write to the remote folder. Check the path and permissions.',
             ];
         }
-        @unlink($remote_file);
+        wp_delete_file($remote_file);
         return [
             'success' => true,
             'message' => 'Connection successful, remote folder is writable.',

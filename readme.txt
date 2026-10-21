@@ -4,8 +4,8 @@ Donate link: https://www.paypal.com/donate/?hosted_button_id=29SAPKFAHMTNW
 Plugin URI: https://olivierbigras.com
 Tags: google sheets, sftp, sync, automation, csv
 Requires at least: 5.0
-Tested up to: 6.9
-Stable tag: 1.6.0
+Tested up to: 7.1
+Stable tag: 1.6.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -116,6 +116,11 @@ A single Donate link in the plugin meta row on the Plugins screen opens PayPal o
 
 == Changelog ==
 
+= 1.6.1 =
+* Tested up to WordPress 7.1
+* Use wp_delete_file() instead of unlink() when cleaning the SFTP write probe
+* Exclude development files from distribution ZIPs (.distignore and export-ignore)
+
 = 1.6.0 =
 * WordPress.org readiness: unique `olissgs_` prefix for functions, classes, options, transients, hooks, and script/style handles
 * Lossless upgrade: copies the 10 settings (and API / encryption keys) from `gsheet_sftp_*` to `olissgs_*`, then deletes the old options
@@ -188,6 +193,9 @@ A single Donate link in the plugin meta row on the Plugins screen opens PayPal o
 * Google Apps Script generator
 
 == Upgrade Notice ==
+
+= 1.6.1 =
+WordPress 7.1 compatibility and Plugin Check fixes. No settings change required.
 
 = 1.6.0 =
 WordPress.org compliance update. Your SFTP settings and API key are migrated automatically. Existing Google Apps Scripts keep working.
