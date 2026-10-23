@@ -1,9 +1,12 @@
-# Exclude development files from GitHub ZIP downloads (export-ignore)
+# Exclude development files from GitHub ZIP downloads (export-ignore).
+# Do not mark languages/ as export-ignore — translation templates ship with the plugin.
+# composer.json and composer.lock stay export-ignore (git archive); they remain in Git.
 .github/ export-ignore
 .gitignore export-ignore
 .gitattributes export-ignore
 .distignore export-ignore
 tests/ export-ignore
+tools/ export-ignore
 bin/ export-ignore
 node_modules/ export-ignore
 vendor/ export-ignore

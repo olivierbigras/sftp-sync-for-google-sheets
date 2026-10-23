@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2
+
+- Translation template (`languages/sftp-sync-for-google-sheets.pot`), `Domain Path: /languages`, and `load_plugin_textdomain` on `init` only for WordPress older than 6.7. Distribution ZIP includes Composer `vendor/` (phpseclib, from versioned `composer.lock`) and `languages/`. `vendor/autoload.php` is loaded at plugin bootstrap when present.
+
 ## 1.6.1
 
 - Tested up to WordPress 7.1

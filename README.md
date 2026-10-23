@@ -4,7 +4,7 @@
 
 A WordPress plugin that receives Google Sheets exports via API and uploads them to any SFTP server. Useful for automated inventory feeds, data syncs, and backups.
 
-![Version](https://img.shields.io/badge/version-1.6.1-blue)
+![Version](https://img.shields.io/badge/version-1.6.2-blue)
 ![License](https://img.shields.io/badge/license-GPL--2.0-green)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple)
 ![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)
@@ -35,7 +35,7 @@ Google Sheet → Apps Script (scheduled) → HTTP POST → WordPress Plugin → 
 ## Installation
 
 ### Method 1: Upload ZIP
-1. Download the latest release ZIP
+1. Download the latest **release** ZIP (built with `tools/build-zip.sh`, includes `vendor/` / phpseclib)
 2. Go to **Plugins → Add New → Upload Plugin**
 3. Upload the ZIP and activate
 
@@ -240,7 +240,21 @@ You can create multiple Apps Scripts in the same sheet, each pointing to a diffe
 
 ---
 
+## Building a release ZIP
+
+The GitHub source download does not include `vendor/`. To produce an installable ZIP with phpseclib:
+
+```bash
+./tools/build-zip.sh
+# output: dist/sftp-sync-for-google-sheets.zip
+```
+
+The script runs `composer install --no-dev --optimize-autoloader` from the versioned `composer.lock`. The ZIP includes `vendor/`, `languages/`, and `composer.json`. It excludes git metadata, tests, PHPCS config, and `composer.lock`.
+
 ## Changelog
+
+### 1.6.2
+- Translation template, Domain Path, JIT-safe textdomain load, and a distribution ZIP that includes `vendor/` (phpseclib) plus `languages/`
 
 ### 1.6.1
 - Tested up to WordPress 7.1
