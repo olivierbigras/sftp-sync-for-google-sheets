@@ -1,0 +1,113 @@
+.olissgs-wrap {
+	max-width: 860px;
+}
+
+.olissgs-wrap .form-table th {
+	width: 200px;
+}
+
+.olissgs-status-badge {
+	display: inline-block;
+	margin: 8px 0 16px;
+	padding: 6px 10px;
+	border-radius: 4px;
+	border: 1px solid #c3c4c7;
+	background: #f0f0f1;
+}
+
+.olissgs-status-ok {
+	border-color: #00a32a;
+	background: #edfaef;
+}
+
+.olissgs-status-error {
+	border-color: #d63638;
+	background: #fcf0f1;
+}
+
+.olissgs-api-key,
+.olissgs-endpoint {
+	font-family: monospace;
+	padding: 8px 12px;
+	border-radius: 4px;
+	word-break: break-all;
+}
+
+.olissgs-api-key {
+	background: #f0f0f1;
+}
+
+.olissgs-endpoint {
+	background: #e7f3e7;
+}
+
+.olissgs-section {
+	background: #fff;
+	padding: 20px;
+	border: 1px solid #ccd0d4;
+	margin: 20px 0;
+}
+
+.olissgs-step-actions {
+	margin-top: 12px;
+}
+
+.olissgs-test-result {
+	margin-top: 12px;
+	padding: 8px 12px;
+	border-left: 4px solid #c3c4c7;
+}
+
+.olissgs-test-result.is-ok {
+	border-left-color: #00a32a;
+	background: #edfaef;
+}
+
+.olissgs-test-result.is-error {
+	border-left-color: #d63638;
+	background: #fcf0f1;
+}
+
+.olissgs-advanced {
+	margin-top: 16px;
+}
+
+.olissgs-advanced summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.olissgs-apps-script {
+	display: block;
+	width: 100%;
+	height: 280px;
+	font-family: monospace;
+	font-size: 12px;
+	margin-top: 8px;
+}
+
+.olissgs-guide {
+	margin: 16px 0;
+}
+
+.olissgs-copy-feedback {
+	margin-left: 8px;
+}
+
+.olissgs-clear-logs {
+	margin: 8px 0 12px;
+}
+
+.olissgs-regen {
+	display: none;
+}
+
+.olissgs-wrap .notice.inline {
+	margin: 8px 0 0;
+	padding: 8px 12px;
+}
+
+.olissgs-wrap .widefat .dashicons {
+	margin-right: 4px;
+	vertical-align: text-bottom;
+}

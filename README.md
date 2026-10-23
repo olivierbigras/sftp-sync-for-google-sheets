@@ -4,7 +4,7 @@
 
 A WordPress plugin that receives Google Sheets exports via API and uploads them to any SFTP server. Useful for automated inventory feeds, data syncs, and backups.
 
-![Version](https://img.shields.io/badge/version-1.5.2-blue)
+![Version](https://img.shields.io/badge/version-1.6.1-blue)
 ![License](https://img.shields.io/badge/license-GPL--2.0-green)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple)
 ![WordPress](https://img.shields.io/badge/WordPress-5.0%2B-blue)
@@ -48,81 +48,53 @@ Google Sheet → Apps Script (scheduled) → HTTP POST → WordPress Plugin → 
 
 ## Step-by-Step Setup Guide
 
-### Step 1: Activate & Configure the Plugin
+### Step 1: SFTP server
 
 1. Go to **Settings → SFTP Sync**
-2. You'll see your auto-generated **API Key** and **Endpoint URL** at the top
-
-### Step 2: Enter SFTP Credentials
-
-Fill in your SFTP server details:
+2. Fill in your SFTP server details:
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| **SFTP Host** | Server IP or hostname | `sftp.example.com` or `123.45.67.89` |
-| **SFTP Port** | Usually 22 or custom | `22` or `15492` |
+| **Host** | Domain or IP, without `sftp://` | `sftp.example.com` or `123.45.67.89` |
+| **Port** | Usually 22 or custom | `22` or `15492` |
 | **Username** | SFTP username | `myuser` |
-| **Password** | SFTP password | `mypassword` |
-| **Remote Path** | Destination folder (must end with `/`) | `/uploads/` or `/www/feeds/` |
+| **Password** | SFTP password (leave blank to keep the saved one) | `mypassword` |
+| **Remote folder** | Destination folder (a trailing `/` is added if needed) | `/uploads/` or `/www/feeds/` |
 
-Click **Save Settings**.
-
-### Step 3: Test the SFTP Connection
-
-Click **Test SFTP Connection** to verify your credentials work.
+3. Optional **Advanced**: file format (CSV / XLSX), filename mode (Dated / Overwrite), and base filename.
+4. Click **Save and test connection**. The plugin checks that the remote folder is writable.
 
 **Common errors:**
 - "Could not connect" → Check host and port
 - "Authentication failed" → Check username and password
 - "No SFTP library available" → See [SFTP Library Requirements](#sftp-library-requirements)
 
-### Step 4: Configure Export Settings
+Password authentication only — SSH private keys are not supported yet.
+
+### Step 2: Google Sheets
+
+After a successful test (or when SFTP is already configured), set the export schedule:
 
 | Setting | Options | Description |
 |---------|---------|-------------|
-| **Schedule** | Daily / Hourly | How often to export |
-| **Daily Export Hour** | 00:00 - 23:00 | Time of day (your timezone) |
-| **Filename Mode** | Dated / Overwrite | New file each time or replace |
-| **Base Filename** | Any name | e.g., `inventory`, `products` |
-| **Export Format** | CSV / XLSX | File format |
+| **Frequency** | Every day / Every hour | How often the Apps Script should export |
+| **Send at** | 00:00 - 23:00 | Time of day in the Google account timezone |
 
-**Filename examples:**
+**Filename examples** (Advanced in step 1):
 - Dated: `inventory_2026-01-07_140000.csv`
 - Overwrite: `inventory.csv`
 
-Click **Save Settings**.
+Then follow the on-screen steps:
 
-### Step 5: Set Up Google Apps Script
+1. In the sheet: **Extensions → Apps Script**
+2. Click **Copy script** and paste the code (it is already visible; endpoint URL and API key are embedded)
+3. Run **`setupTrigger()`** once and authorize access
 
-1. Open your Google Sheet
-2. Go to **Extensions → Apps Script**
-3. Delete any existing code
-4. Go back to your WordPress plugin settings
-5. Click **"Show Google Apps Script Code"**
-6. **Copy the entire code** (it's pre-configured with your settings)
-7. Paste into the Apps Script editor
-8. Press **Ctrl+S** to save
-9. Name your project (e.g., "SFTP Export")
+Endpoint URL, API key, and **Regenerate key** are under **Advanced** in this section.
 
-### Step 6: Run Initial Test
+### Step 3: Activity
 
-1. In Apps Script, make sure `exportAndUpload` is selected in the function dropdown
-2. Click **Run**
-3. **Authorize the script** when prompted:
-   - Click "Review Permissions"
-   - Choose your Google account
-   - Click "Advanced" → "Go to [project name] (unsafe)"
-   - Click "Allow"
-4. Check the execution log for success message
-5. Verify the file appears on your SFTP server
-
-### Step 7: Enable Automatic Schedule
-
-1. In the function dropdown, select **`setupTrigger`**
-2. Click **Run**
-3. The trigger is now active!
-
-**To verify:** Click the clock icon (⏰) in the left sidebar to see your trigger.
+The activity table lists recent sends (date, status, message). Use **Clear log** to empty it.
 
 ---
 
@@ -133,9 +105,8 @@ Click **Save Settings**.
 The settings (schedule, filename mode, format, etc.) are embedded in the generated Apps Script. If you change settings in WordPress:
 
 1. Save the new settings
-2. Click "Show Google Apps Script Code"
-3. Copy the new code
-4. Paste into Google Apps Script (replacing the old code)
+2. Copy the script again from step 2
+3. Paste into Google Apps Script (replacing the old code)
 5. Save
 6. Run `setupTrigger` again if you changed the schedule
 
@@ -150,7 +121,7 @@ The settings (schedule, filename mode, format, etc.) are embedded in the generat
 **Fix:** 
 1. Go to Settings → SFTP Sync
 2. Enter all SFTP credentials
-3. Click Save Settings
+3. Click **Save and test connection**
 
 ### Error: "rest_forbidden" or "401 Unauthorized"
 
@@ -158,7 +129,7 @@ The settings (schedule, filename mode, format, etc.) are embedded in the generat
 
 **Fix:**
 1. Go to Settings → SFTP Sync
-2. Copy the API Key shown at the top
+2. Copy the API Key from **2. Google Sheets → Advanced**
 3. In Google Apps Script, update `CONFIG.API_KEY` with the new key
 4. Or re-copy the entire Apps Script code (recommended)
 
@@ -220,7 +191,7 @@ composer require phpseclib/phpseclib:~3.0
 If you suspect your API key is compromised:
 
 1. Go to Settings → SFTP Sync
-2. Click **Regenerate** next to the API Key
+2. Open **2. Google Sheets → Advanced** and click **Regenerate key**
 3. **Important:** Re-copy the Apps Script code to your Google Sheet
 4. The old API key will stop working immediately
 
@@ -270,6 +241,17 @@ You can create multiple Apps Scripts in the same sheet, each pointing to a diffe
 ---
 
 ## Changelog
+
+### 1.6.1
+- Tested up to WordPress 7.1
+- Use `wp_delete_file()` instead of `unlink()` when cleaning the SFTP write probe
+- Exclude development files from distribution ZIPs
+
+### 1.6.0
+- WordPress.org readiness: unique `olissgs_` prefix; lossless migration of the 10 settings from `gsheet_sftp_*`
+- Existing REST endpoint `gsheet-sftp/v1` kept; admin CSS/JS extracted to files
+- Settings screen in 3 numbered steps (SFTP, Google Sheets, Activity), Save and test connection, single Donate link in plugin_row_meta
+- External services documented in readme.txt
 
 ### 1.5.2
 - Fixed Save Settings wiping the API key, which caused Google Apps Script exports to return 401 rest_forbidden
