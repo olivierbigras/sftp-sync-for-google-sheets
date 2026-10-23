@@ -1,8 +1,11 @@
 # Logs
 logs/*.log
 
-# Composer
+# Composer runtime (lockfile is versioned)
 vendor/
+
+# Release artifacts
+dist/
 
 # OS files
 .DS_Store

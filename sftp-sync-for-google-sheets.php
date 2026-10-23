@@ -3,7 +3,7 @@
  * Plugin Name: SFTP Sync for Google Sheets
  * Plugin URI: https://github.com/olivierbigras/sftp-sync-for-google-sheets/
  * Description: Receive Google Sheets exports via API and upload to SFTP server. Automate daily syncs from Google Sheets to your server.
- * Version: 1.6.1
+ * Version: 1.6.2
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Tested up to: 7.1
@@ -12,13 +12,14 @@
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: sftp-sync-for-google-sheets
+ * Domain Path: /languages
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-define('OLISSGS_VERSION', '1.6.1');
+define('OLISSGS_VERSION', '1.6.2');
 define('OLISSGS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OLISSGS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OLISSGS_DONATE_URL', 'https://www.paypal.com/donate/?hosted_button_id=29SAPKFAHMTNW');
@@ -54,6 +55,11 @@ class OLISSGS_Plugin {
     }
 
     private function load_dependencies() {
+        $olissgs_autoload = OLISSGS_PLUGIN_DIR . 'vendor/autoload.php';
+        if (file_exists($olissgs_autoload)) {
+            require_once $olissgs_autoload;
+        }
+
         require_once OLISSGS_PLUGIN_DIR . 'includes/class-olissgs-options.php';
         require_once OLISSGS_PLUGIN_DIR . 'includes/class-admin-settings.php';
         require_once OLISSGS_PLUGIN_DIR . 'includes/class-sftp-handler.php';
@@ -64,6 +70,7 @@ class OLISSGS_Plugin {
         register_activation_hook(__FILE__, [$this, 'activate']);
         register_deactivation_hook(__FILE__, [$this, 'deactivate']);
 
+        add_action('init', [$this, 'maybe_load_textdomain']);
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
@@ -71,6 +78,25 @@ class OLISSGS_Plugin {
         add_filter('plugin_action_links_' . OLISSGS_BASENAME, [$this, 'plugin_action_links']);
         add_filter('plugin_row_meta', [$this, 'plugin_row_meta'], 10, 2);
         add_action('wp_ajax_olissgs_mark_script_copied', [OLISSGS_Admin_Settings::get_instance(), 'ajax_mark_script_copied']);
+    }
+
+    /**
+     * Load translations on WordPress versions before 6.7 (JIT loading).
+     */
+    public function maybe_load_textdomain() {
+        global $wp_version;
+
+        if (version_compare((string) $wp_version, '6.7', '>=')) {
+            return;
+        }
+
+        // WordPress 6.7+ loads translations just-in-time from Domain Path.
+        // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
+        load_plugin_textdomain(
+            'sftp-sync-for-google-sheets',
+            false,
+            dirname(OLISSGS_BASENAME) . '/languages'
+        );
     }
 
     /**

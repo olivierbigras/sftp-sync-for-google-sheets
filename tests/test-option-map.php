@@ -169,9 +169,13 @@ $main = file_get_contents(dirname(__DIR__) . '/sftp-sync-for-google-sheets.php')
 olissgs_assert(strpos($main, "plugin_row_meta") !== false, 'Donate lives in plugin_row_meta');
 olissgs_assert(substr_count($main, 'esc_html__(\'Donate\'') === 1, 'exactly one Donate label in the main plugin file');
 olissgs_assert(strpos($main, 'donate_notice') === false, 'main plugin file has no donate notice');
-olissgs_assert(strpos($main, "Version: 1.6.1") !== false, 'plugin header version is 1.6.1');
+olissgs_assert(strpos($main, "Version: 1.6.2") !== false, 'plugin header version is 1.6.2');
 olissgs_assert(strpos($main, "Tested up to: 7.1") !== false, 'plugin header tested up to 7.1');
+olissgs_assert(strpos($main, "Domain Path: /languages") !== false, 'plugin header has Domain Path');
 olissgs_assert(strpos($main, "https://github.com/olivierbigras/sftp-sync-for-google-sheets") !== false, 'plugin URI uses github.com/olivierbigras');
+olissgs_assert(strpos($main, 'vendor/autoload.php') !== false, 'plugin loads Composer autoload when present');
+olissgs_assert(strpos($main, 'OLISSGS_DONATE_URL') !== false, 'Donate URL constant is present');
+olissgs_assert(strpos($main, 'maybe_load_textdomain') !== false, 'textdomain loader is registered');
 
 $sftp = file_get_contents(dirname(__DIR__) . '/includes/class-sftp-handler.php');
 olissgs_assert(strpos($sftp, 'unlink(') === false, 'SFTP handler does not call unlink()');
@@ -179,8 +183,11 @@ olissgs_assert(strpos($sftp, 'wp_delete_file(') !== false, 'SFTP handler uses wp
 
 $readme = file_get_contents(dirname(__DIR__) . '/readme.txt');
 olissgs_assert(preg_match('/^Tested up to:\s*7\.1\r?$/m', $readme) === 1, 'readme Tested up to is 7.1');
-olissgs_assert(preg_match('/^Stable tag:\s*1\.6\.1\r?$/m', $readme) === 1, 'readme Stable tag is 1.6.1');
-olissgs_assert(strpos($readme, '= 1.6.1 =') !== false, 'readme changelog includes 1.6.1');
+olissgs_assert(preg_match('/^Stable tag:\s*1\.6\.2\r?$/m', $readme) === 1, 'readme Stable tag is 1.6.2');
+olissgs_assert(strpos($readme, '= 1.6.2 =') !== false, 'readme changelog includes 1.6.2');
+olissgs_assert(strpos($readme, '= 1.6.1 =') !== false, 'readme changelog still includes 1.6.1');
+olissgs_assert(is_file(dirname(__DIR__) . '/languages/sftp-sync-for-google-sheets.pot'), 'POT file exists');
+olissgs_assert(is_file(dirname(__DIR__) . '/composer.lock'), 'composer.lock is versioned');
 olissgs_assert(strpos($readme, 'github.com/bigrat95') === false, 'readme has no old GitHub account links');
 
 if ($failed > 0) {

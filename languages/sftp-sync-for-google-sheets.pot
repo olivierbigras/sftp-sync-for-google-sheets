@@ -1,0 +1,295 @@
+# Copyright (C) 2026 Olivier Bigras
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: SFTP Sync for Google Sheets 1.6.2\n"
+"Report-Msgid-Bugs-To: https://github.com/olivierbigras/sftp-sync-for-google-sheets/issues\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-23T05:04:29+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: sftp-sync-for-google-sheets\n"
+
+#. Plugin Name of the plugin
+#: sftp-sync-for-google-sheets.php
+#: sftp-sync-for-google-sheets.php:165
+msgid "SFTP Sync for Google Sheets"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: sftp-sync-for-google-sheets.php
+msgid "https://github.com/olivierbigras/sftp-sync-for-google-sheets/"
+msgstr ""
+
+#. Description of the plugin
+#: sftp-sync-for-google-sheets.php
+msgid "Receive Google Sheets exports via API and upload to SFTP server. Automate daily syncs from Google Sheets to your server."
+msgstr ""
+
+#. Author of the plugin
+#: sftp-sync-for-google-sheets.php
+msgid "Olivier Bigras"
+msgstr ""
+
+#. Author URI of the plugin
+#: sftp-sync-for-google-sheets.php
+msgid "https://olivierbigras.com"
+msgstr ""
+
+#: includes/class-admin-settings.php:339
+msgid "Not configured"
+msgstr ""
+
+#. translators: %s: last test error
+#: includes/class-admin-settings.php:347
+#, php-format
+msgid "Error: %s"
+msgstr ""
+
+#. translators: %s: human time difference
+#: includes/class-admin-settings.php:366
+#, php-format
+msgid "Connection OK, last send %s ago"
+msgstr ""
+
+#: includes/class-admin-settings.php:373
+msgid "Connection OK"
+msgstr ""
+
+#: includes/class-admin-settings.php:379
+msgid "Configured — save and test the connection"
+msgstr ""
+
+#: includes/class-admin-settings.php:400
+msgid "API key regenerated. The current script will stop working until you copy it again."
+msgstr ""
+
+#: includes/class-admin-settings.php:408
+msgid "Logs cleared!"
+msgstr ""
+
+#: includes/class-admin-settings.php:437
+msgid "Your settings have changed: copy the script again into Google Sheets."
+msgstr ""
+
+#: includes/class-admin-settings.php:445
+msgid "1. SFTP server"
+msgstr ""
+
+#: includes/class-admin-settings.php:449
+msgid "Host"
+msgstr ""
+
+#: includes/class-admin-settings.php:453
+msgid "sftp.example.com or IP address"
+msgstr ""
+
+#: includes/class-admin-settings.php:454
+msgid "Domain name or IP address, without sftp://. A pasted sftp:// prefix is removed when you save."
+msgstr ""
+
+#: includes/class-admin-settings.php:458
+msgid "Port"
+msgstr ""
+
+#: includes/class-admin-settings.php:466
+msgid "Username"
+msgstr ""
+
+#: includes/class-admin-settings.php:474
+msgid "Password"
+msgstr ""
+
+#: includes/class-admin-settings.php:479
+msgid "Re-enter password"
+msgstr ""
+
+#: includes/class-admin-settings.php:479
+msgid "•••••••• (saved)"
+msgstr ""
+
+#: includes/class-admin-settings.php:481
+msgid "The stored password is unreadable. You must type it again and save."
+msgstr ""
+
+#: includes/class-admin-settings.php:483
+msgid "Leave blank to keep the current password. Password authentication only — SSH private keys are not supported yet."
+msgstr ""
+
+#: includes/class-admin-settings.php:488
+msgid "Remote folder"
+msgstr ""
+
+#: includes/class-admin-settings.php:492
+msgid "/path/to/uploads/"
+msgstr ""
+
+#: includes/class-admin-settings.php:493
+msgid "A trailing / is added if needed."
+msgstr ""
+
+#: includes/class-admin-settings.php:499
+msgid "Save and test connection"
+msgstr ""
+
+#: includes/class-admin-settings.php:517
+#: includes/class-admin-settings.php:600
+msgid "Advanced"
+msgstr ""
+
+#: includes/class-admin-settings.php:520
+msgid "File format"
+msgstr ""
+
+#: includes/class-admin-settings.php:529
+msgid "Filename"
+msgstr ""
+
+#: includes/class-admin-settings.php:532
+msgid "Dated (new file each export)"
+msgstr ""
+
+#: includes/class-admin-settings.php:533
+msgid "Overwrite (same filename)"
+msgstr ""
+
+#: includes/class-admin-settings.php:535
+msgid "Preview:"
+msgstr ""
+
+#: includes/class-admin-settings.php:539
+msgid "Base filename"
+msgstr ""
+
+#: includes/class-admin-settings.php:551
+msgid "2. Google Sheets"
+msgstr ""
+
+#: includes/class-admin-settings.php:553
+msgid "Configure and test the SFTP server first."
+msgstr ""
+
+#: includes/class-admin-settings.php:559
+msgid "Frequency"
+msgstr ""
+
+#: includes/class-admin-settings.php:562
+msgid "Every day"
+msgstr ""
+
+#: includes/class-admin-settings.php:563
+msgid "Every hour"
+msgstr ""
+
+#: includes/class-admin-settings.php:568
+msgid "Send at"
+msgstr ""
+
+#: includes/class-admin-settings.php:577
+msgid "Timezone of the Google account that runs the script."
+msgstr ""
+
+#: includes/class-admin-settings.php:582
+msgid "Save Settings"
+msgstr ""
+
+#: includes/class-admin-settings.php:585
+msgid "In the sheet: Extensions › Apps Script."
+msgstr ""
+
+#: includes/class-admin-settings.php:587
+msgid "Paste this code:"
+msgstr ""
+
+#: includes/class-admin-settings.php:590
+msgid "Copy script"
+msgstr ""
+
+#: includes/class-admin-settings.php:594
+msgid "Google Apps Script"
+msgstr ""
+
+#: includes/class-admin-settings.php:596
+msgid "Run setupTrigger() once and authorize access."
+msgstr ""
+
+#: includes/class-admin-settings.php:603
+msgid "Endpoint URL"
+msgstr ""
+
+#: includes/class-admin-settings.php:607
+#: includes/class-admin-settings.php:616
+msgid "Copy"
+msgstr ""
+
+#: includes/class-admin-settings.php:612
+msgid "API Key"
+msgstr ""
+
+#: includes/class-admin-settings.php:619
+msgid "The current script will stop working."
+msgstr ""
+
+#: includes/class-admin-settings.php:620
+msgid "Regenerate key"
+msgstr ""
+
+#: includes/class-admin-settings.php:638
+msgid "3. Activity"
+msgstr ""
+
+#: includes/class-admin-settings.php:641
+msgid "Clear the activity log?"
+msgstr ""
+
+#: includes/class-admin-settings.php:642
+msgid "Clear log"
+msgstr ""
+
+#: includes/class-admin-settings.php:646
+msgid "No sends yet. The first will appear here after the script runs."
+msgstr ""
+
+#: includes/class-admin-settings.php:651
+msgid "Date"
+msgstr ""
+
+#: includes/class-admin-settings.php:652
+msgid "Status"
+msgstr ""
+
+#: includes/class-admin-settings.php:653
+msgid "Message"
+msgstr ""
+
+#: includes/class-admin-settings.php:659
+msgid "Info"
+msgstr ""
+
+#: includes/class-admin-settings.php:662
+msgid "Success"
+msgstr ""
+
+#: includes/class-admin-settings.php:665
+msgid "Error"
+msgstr ""
+
+#: sftp-sync-for-google-sheets.php:109
+msgid "Settings"
+msgstr ""
+
+#: sftp-sync-for-google-sheets.php:125
+msgid "Donate"
+msgstr ""
+
+#: sftp-sync-for-google-sheets.php:166
+msgid "SFTP Sync"
+msgstr ""
+
+#: sftp-sync-for-google-sheets.php:212
+msgid "Copied to clipboard"
+msgstr ""

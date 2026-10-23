@@ -5,7 +5,7 @@ Plugin URI: https://olivierbigras.com
 Tags: google sheets, sftp, sync, automation, csv
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 1.6.1
+Stable tag: 1.6.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -116,6 +116,9 @@ A single Donate link in the plugin meta row on the Plugins screen opens PayPal o
 
 == Changelog ==
 
+= 1.6.2 =
+* Translation template (languages/sftp-sync-for-google-sheets.pot), Domain Path, and load_plugin_textdomain on init only for WordPress older than 6.7. Release ZIP includes vendor/ (phpseclib via composer.lock) and languages/. Autoload is loaded at plugin bootstrap when present.
+
 = 1.6.1 =
 * Tested up to WordPress 7.1
 * Use wp_delete_file() instead of unlink() when cleaning the SFTP write probe
@@ -193,6 +196,9 @@ A single Donate link in the plugin meta row on the Plugins screen opens PayPal o
 * Google Apps Script generator
 
 == Upgrade Notice ==
+
+= 1.6.2 =
+Adds translations and ships phpseclib in the distribution ZIP. Settings and API key are unchanged from 1.6.1.
 
 = 1.6.1 =
 WordPress 7.1 compatibility and Plugin Check fixes. No settings change required.
