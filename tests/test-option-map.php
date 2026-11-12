@@ -114,7 +114,7 @@ $GLOBALS['olissgs_options'] = [
     'gsheet_sftp_enc_key'        => 'legacy-enc-key',
 ];
 
-OLISSGS_Options::maybe_migrate();
+OLISSGS_Options::maybe_migrate_options();
 
 olissgs_assert(OLISSGS_Options::get('host') === 'sftp.example.com', 'host migrated');
 olissgs_assert((int) OLISSGS_Options::get('port') === 15492, 'port migrated');
@@ -133,10 +133,10 @@ foreach (OLISSGS_Options::all_legacy_map() as $legacy) {
     olissgs_assert(!array_key_exists($legacy, $GLOBALS['olissgs_options']), "legacy option {$legacy} deleted after copy");
 }
 
-olissgs_assert(get_option('olissgs_options_migrated') === '1.6.0', 'migration flag stored');
+olissgs_assert(get_option('olissgs_options_migrated') === '1.6.3', 'migration flag stored');
 
 $GLOBALS['olissgs_options']['gsheet_sftp_host'] = 'should-not-overwrite';
-OLISSGS_Options::maybe_migrate();
+OLISSGS_Options::maybe_migrate_options();
 olissgs_assert(OLISSGS_Options::get('host') === 'sftp.example.com', 'second migrate run does not overwrite new values');
 
 $GLOBALS['olissgs_options'] = [
@@ -144,7 +144,7 @@ $GLOBALS['olissgs_options'] = [
     'gsheet_sftp_host' => 'old.example.com',
 ];
 delete_option('olissgs_options_migrated');
-OLISSGS_Options::maybe_migrate();
+OLISSGS_Options::maybe_migrate_options();
 olissgs_assert(OLISSGS_Options::get('host') === 'already-new.example.com', 'existing new option is kept when both keys exist');
 olissgs_assert(!array_key_exists('gsheet_sftp_host', $GLOBALS['olissgs_options']), 'legacy host still deleted when new already exists');
 
@@ -169,8 +169,7 @@ $main = file_get_contents(dirname(__DIR__) . '/sftp-sync-for-google-sheets.php')
 olissgs_assert(strpos($main, "plugin_row_meta") !== false, 'Donate lives in plugin_row_meta');
 olissgs_assert(substr_count($main, 'esc_html__(\'Donate\'') === 1, 'exactly one Donate label in the main plugin file');
 olissgs_assert(strpos($main, 'donate_notice') === false, 'main plugin file has no donate notice');
-olissgs_assert(strpos($main, "Version: 1.6.2") !== false, 'plugin header version is 1.6.2');
-olissgs_assert(strpos($main, "Tested up to: 7.1") !== false, 'plugin header tested up to 7.1');
+olissgs_assert(strpos($main, "Version: 1.6.3") !== false, 'plugin header version is 1.6.3');
 olissgs_assert(strpos($main, "Domain Path: /languages") !== false, 'plugin header has Domain Path');
 olissgs_assert(strpos($main, "https://github.com/olivierbigras/sftp-sync-for-google-sheets") !== false, 'plugin URI uses github.com/olivierbigras');
 olissgs_assert(strpos($main, 'vendor/autoload.php') !== false, 'plugin loads Composer autoload when present');
@@ -183,8 +182,8 @@ olissgs_assert(strpos($sftp, 'wp_delete_file(') !== false, 'SFTP handler uses wp
 
 $readme = file_get_contents(dirname(__DIR__) . '/readme.txt');
 olissgs_assert(preg_match('/^Tested up to:\s*7\.1\r?$/m', $readme) === 1, 'readme Tested up to is 7.1');
-olissgs_assert(preg_match('/^Stable tag:\s*1\.6\.2\r?$/m', $readme) === 1, 'readme Stable tag is 1.6.2');
-olissgs_assert(strpos($readme, '= 1.6.2 =') !== false, 'readme changelog includes 1.6.2');
+olissgs_assert(preg_match('/^Stable tag:\s*1\.6\.3\r?$/m', $readme) === 1, 'readme Stable tag is 1.6.3');
+olissgs_assert(strpos($readme, '= 1.6.3 =') !== false, 'readme changelog includes 1.6.3');
 olissgs_assert(strpos($readme, '= 1.6.1 =') !== false, 'readme changelog still includes 1.6.1');
 olissgs_assert(is_file(dirname(__DIR__) . '/languages/sftp-sync-for-google-sheets.pot'), 'POT file exists');
 olissgs_assert(is_file(dirname(__DIR__) . '/composer.lock'), 'composer.lock is versioned');

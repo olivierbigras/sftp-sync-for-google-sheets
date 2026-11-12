@@ -3,10 +3,9 @@
  * Plugin Name: SFTP Sync for Google Sheets
  * Plugin URI: https://github.com/olivierbigras/sftp-sync-for-google-sheets/
  * Description: Receive Google Sheets exports via API and upload to SFTP server. Automate daily syncs from Google Sheets to your server.
- * Version: 1.6.2
+ * Version: 1.6.3
  * Requires at least: 5.0
  * Requires PHP: 7.4
- * Tested up to: 7.1
  * Author: Olivier Bigras
  * Author URI: https://olivierbigras.com
  * License: GPLv2 or later
@@ -19,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('OLISSGS_VERSION', '1.6.2');
+define('OLISSGS_VERSION', '1.6.3');
 define('OLISSGS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OLISSGS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OLISSGS_DONATE_URL', 'https://www.paypal.com/donate/?hosted_button_id=29SAPKFAHMTNW');
@@ -50,7 +49,6 @@ class OLISSGS_Plugin {
 
     private function __construct() {
         $this->load_dependencies();
-        OLISSGS_Options::maybe_migrate();
         $this->init_hooks();
     }
 
@@ -70,6 +68,8 @@ class OLISSGS_Plugin {
         register_activation_hook(__FILE__, [$this, 'activate']);
         register_deactivation_hook(__FILE__, [$this, 'deactivate']);
 
+        add_action('plugins_loaded', [OLISSGS_Options::class, 'maybe_migrate_options'], 5);
+        add_action('init', [OLISSGS_Options::class, 'maybe_migrate_usermeta'], 5);
         add_action('init', [$this, 'maybe_load_textdomain']);
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
@@ -131,7 +131,7 @@ class OLISSGS_Plugin {
      */
     public function activate() {
         require_once OLISSGS_PLUGIN_DIR . 'includes/class-olissgs-options.php';
-        OLISSGS_Options::maybe_migrate();
+        OLISSGS_Options::maybe_migrate_options();
 
         if (!OLISSGS_Options::get('api_key')) {
             OLISSGS_Options::update('api_key', wp_generate_password(32, false));

@@ -5,7 +5,7 @@ Plugin URI: https://olivierbigras.com
 Tags: google sheets, sftp, sync, automation, csv
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 1.6.2
+Stable tag: 1.6.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -116,6 +116,12 @@ A single Donate link in the plugin meta row on the Plugins screen opens PayPal o
 
 == Changelog ==
 
+= 1.6.3 =
+* CRITICAL FIX: Migration now runs on plugins_loaded/init instead of constructor, preventing fatal errors on upgrade from 1.5.3 with donate-dismissed user meta
+* Migration is now idempotent and crash-safe: split into options and user-meta steps with separate flags, writes options flag immediately after copy
+* Recovery mode: sites in broken state (options migrated but no flag) auto-recover on next load
+* User-meta migration uses direct DB query instead of get_users() to avoid early WP_User_Query issues before pluggable.php loads
+
 = 1.6.2 =
 * Translation template (languages/sftp-sync-for-google-sheets.pot), Domain Path, and load_plugin_textdomain on init only for WordPress older than 6.7. Release ZIP includes vendor/ (phpseclib via composer.lock) and languages/. Autoload is loaded at plugin bootstrap when present.
 
@@ -196,6 +202,9 @@ A single Donate link in the plugin meta row on the Plugins screen opens PayPal o
 * Google Apps Script generator
 
 == Upgrade Notice ==
+
+= 1.6.3 =
+CRITICAL: Fixes fatal error on upgrade from 1.5.3 when donate-dismissed user meta exists. Sites already broken will auto-recover. All users should update immediately.
 
 = 1.6.2 =
 Adds translations and ships phpseclib in the distribution ZIP. Settings and API key are unchanged from 1.6.1.
