@@ -105,12 +105,31 @@ class OLISSGS_Options {
 
     /**
      * Copy each legacy option to its olissgs_* key, then delete the old key.
+     * Runs on plugins_loaded to avoid early constructor calls.
+     * Idempotent and crash-safe: writes flag immediately after options copy.
      */
-    public static function maybe_migrate() {
+    public static function maybe_migrate_options() {
         if (get_option(self::key('options_migrated'), false)) {
             return;
         }
 
+        // Recovery: detect broken state (new options exist but no flag).
+        // If any olissgs_* option exists, assume options were already migrated.
+        $has_new_options = false;
+        foreach (self::all_legacy_map() as $name => $legacy) {
+            if (get_option(self::key($name), null) !== null) {
+                $has_new_options = true;
+                break;
+            }
+        }
+
+        if ($has_new_options) {
+            // Broken state recovery: options already migrated, just set the flag.
+            update_option(self::key('options_migrated'), '1.6.3');
+            return;
+        }
+
+        // Normal migration: copy legacy options to new keys.
         foreach (self::all_legacy_map() as $name => $legacy) {
             $new_key = self::key($name);
             $new_val = get_option($new_key, null);
@@ -125,23 +144,37 @@ class OLISSGS_Options {
             }
         }
 
-        self::migrate_user_meta();
-
-        update_option(self::key('options_migrated'), '1.6.0');
+        // Write flag immediately after options copy, independent of user-meta step.
+        update_option(self::key('options_migrated'), '1.6.3');
     }
 
     /**
      * Move donate-notice dismissals to the prefixed user meta key.
+     * Runs on init (after pluggable.php) to ensure user functions exist.
+     * Independent flag allows user-meta migration to fail without breaking options.
      */
-    private static function migrate_user_meta() {
-        $users = get_users([
-            'fields'       => 'ID',
-            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- one-time user-meta migration.
-            'meta_key'     => 'sftp_sync_gs_donate_dismissed',
-            'meta_compare' => 'EXISTS',
-        ]);
+    public static function maybe_migrate_usermeta() {
+        if (get_option(self::key('usermeta_migrated'), false)) {
+            return;
+        }
 
-        foreach ($users as $user_id) {
+        global $wpdb;
+
+        // Use direct DB query instead of get_users to avoid early WP_User_Query issues.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        $user_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT DISTINCT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s",
+                'sftp_sync_gs_donate_dismissed'
+            )
+        );
+
+        if (empty($user_ids)) {
+            update_option(self::key('usermeta_migrated'), '1.6.3');
+            return;
+        }
+
+        foreach ($user_ids as $user_id) {
             $old = get_user_meta($user_id, 'sftp_sync_gs_donate_dismissed', true);
             if ('' === $old || false === $old) {
                 continue;
@@ -151,6 +184,8 @@ class OLISSGS_Options {
             }
             delete_user_meta($user_id, 'sftp_sync_gs_donate_dismissed');
         }
+
+        update_option(self::key('usermeta_migrated'), '1.6.3');
     }
 
     /**
@@ -163,6 +198,7 @@ class OLISSGS_Options {
             self::key('api_key'),
             self::key('enc_key'),
             self::key('options_migrated'),
+            self::key('usermeta_migrated'),
             self::key('last_test'),
             self::key('script_copied_fp'),
         ];
