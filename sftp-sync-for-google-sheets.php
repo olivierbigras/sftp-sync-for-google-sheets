@@ -6,7 +6,6 @@
  * Version: 1.6.2
  * Requires at least: 5.0
  * Requires PHP: 7.4
- * Tested up to: 7.1
  * Author: Olivier Bigras
  * Author URI: https://olivierbigras.com
  * License: GPLv2 or later
